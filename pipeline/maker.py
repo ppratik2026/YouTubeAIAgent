@@ -96,7 +96,10 @@ def _finish(job, cat, vid_id, work, script, meta, topic, gap, hook=None, extra=N
     meta.update(description="\n\n".join(d for d in desc if d).strip(), language=lang,
                 category_id=cat["youtube_category"], duration=round(total, 1), topic=topic["topic"],
                 hook=hook["text"] if hook else "", hook_score=hook["score"]["verdict"] if hook else None,
-                quality=score, quality_notes=reasons, similar_to=similar_to, similarity=round(similar, 3))
+                quality=score, quality_notes=reasons, similar_to=similar_to, similarity=round(similar, 3),
+                # What was said when - lets retention drops be traced back to the exact line.
+                timeline=[{"start": round(s["start"], 2), "end": round(s["start"] + s["dur"], 2),
+                           "text": s["narration"]} for s in scenes])
     (out / "script.txt").write_text(text, encoding="utf-8")
     write_json(out / "meta.json", meta)
     shutil.rmtree(work, ignore_errors=True)
@@ -134,8 +137,9 @@ def make_video(job):
 
     structure = writer.pick_structure(_recent(job["category"], "structure"))
     hook = writer.best_hook(cat, lang, fmt, topic, _recent(job["category"], "formula"))[0]
-    script = (writer.write_short(cat, lang, topic, hook, structure, parent) if portrait
-              else writer.write_long(cat, lang, topic, hook, job.get("minutes") or 8, structure))
+    lessons = insights.lessons_block(job["category"], fmt)
+    script = (writer.write_short(cat, lang, topic, hook, structure, parent, lessons) if portrait
+              else writer.write_long(cat, lang, topic, hook, job.get("minutes") or 8, structure, lessons))
     meta = writer.package(cat, lang, fmt, topic, script)
 
     gender = job.get("voice") or "male"

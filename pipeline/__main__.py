@@ -142,6 +142,7 @@ def tick(max_uploads=None):
         maker.upload_ready(max_uploads)
         maker.cleanup()
         insights.refresh_stats()
+        insights.refresh_retention()
     except Exception:  # noqa: BLE001
         log.error("upload/stats error:\n%s", traceback.format_exc())
     job = state.next_job()

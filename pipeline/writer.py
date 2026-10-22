@@ -155,7 +155,7 @@ def _offline_scenes(n, language):
     return [{"narration": line, "visual_query": "city night", "image_prompt": "a city at night"} for _ in range(n)]
 
 
-def write_short(cat, language, topic, hook, structure, parent=None):
+def write_short(cat, language, topic, hook, structure, parent=None, lessons=""):
     words = 130
     from_long = (f"This Short is cut from the channel's full video. Its script:\n{parent[:3500]}\n"
                  "Pick ONE moment that works on its own (yt-shorts skill), retell it fresh, and end with a "
@@ -163,7 +163,7 @@ def write_short(cat, language, topic, hook, structure, parent=None):
     prompt = (
         f"Write a YouTube SHORT (vertical, about {words} spoken words, 40-55 seconds).\n"
         f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n{from_long}"
-        f"Shape: {structure}\n"
+        f"Shape: {structure}\n{lessons}"
         f"Start with exactly this hook: {hook['text']}\n"
         "6-9 scenes. The last line must loop back into the first line. No 'subscribe' talk.\n"
         f'JSON: {{"sections": [{{"heading": "Short", "scenes": [{SCENE_JSON}]}}]}}'
@@ -172,13 +172,13 @@ def write_short(cat, language, topic, hook, structure, parent=None):
                     offline=lambda: {"sections": [{"heading": "Short", "scenes": _offline_scenes(6, language)}]})
 
 
-def write_long(cat, language, topic, hook, minutes, structure):
+def write_long(cat, language, topic, hook, minutes, structure, lessons=""):
     words = int(minutes * WPM)
     n_sections = max(3, min(10, round(minutes / 1.5)))
     outline = ask_json(
         f"Plan a {minutes}-minute YouTube video (~{words} spoken words) in {n_sections} sections.\n"
         f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n"
-        f"The hook is: {hook['text']}\nShape of the video: {structure}\n"
+        f"The hook is: {hook['text']}\nShape of the video: {structure}\n{lessons}"
         "Put an open question early that is only answered near the end, and a small re-hook every 2-3 "
         "minutes so people stay (watch time is what grows the channel).\n"
         "Section 1 is the hook + the turn (say what the video will do, no channel intro). The last section "
@@ -199,7 +199,7 @@ def write_long(cat, language, topic, hook, minutes, structure):
             f"Whole plan: {[s['heading'] for s in outline['sections']]}\n"
             f"This section: {sec['heading']} - {sec['beats']}\n"
             f"Already said (do not repeat): {' '.join(story_so_far)[-1500:]}\n{first}"
-            f"About {target} spoken words, split into scenes of 1-2 sentences.\n"
+            f"About {target} spoken words, split into scenes of 1-2 sentences.\n{lessons}"
             f'JSON: {{"scenes": [{SCENE_JSON}]}}',
             _system(cat, language),
             offline=lambda: {"scenes": _offline_scenes(4, language)},
