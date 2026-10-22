@@ -1,5 +1,5 @@
 {
-  "_help": "Add your own category by copying any block. visuals: stock = real footage from Pexels, ai = AI images from Pollinations in ai_style. news: true = facts come from today's news (Google News RSS) and the script may only use those facts. youtube_category: YouTube's category id. mood picks voice pace and assets/music/<mood>/.",
+  "_help": "Add your own category by copying any block. visuals: stock = real footage from Pexels, ai = AI images in the look named by style (see styles.json). news: true = facts come from today's news (Google News RSS) and the script may only use those facts. youtube_category: YouTube's category id. mood picks voice pace and assets/music/<mood>/.",
   "news": {
     "label": "News",
     "visuals": "stock",
@@ -21,11 +21,11 @@
   "drama": {
     "label": "Drama story",
     "visuals": "ai",
-    "ai_style": "cinematic film still, dramatic lighting, realistic Indian characters, shallow depth of field",
     "news": false,
     "mood": "emotional",
     "youtube_category": "24",
-    "tone": "An original fictional family/relationship drama with a twist, told by a narrator. Clearly fiction. Emotional, simple language."
+    "tone": "An original fictional family/relationship drama with a twist, told by a narrator. Clearly fiction. Emotional, simple language.",
+    "style": "cinematic"
   },
   "music": {
     "label": "Music stories",
@@ -38,38 +38,38 @@
   "animation": {
     "label": "Animated story",
     "visuals": "ai",
-    "ai_style": "colourful animated movie style, expressive cartoon characters, soft lighting",
     "news": false,
     "mood": "playful",
     "youtube_category": "1",
-    "tone": "An original animated story with a clear moral, fun for all ages."
+    "tone": "An original animated story with a clear moral, fun for all ages.",
+    "style": "3d"
   },
   "2d": {
     "label": "2D cartoon story",
     "visuals": "ai",
-    "ai_style": "flat 2D cartoon illustration, bold outlines, bright flat colours, children's book style",
     "news": false,
     "mood": "playful",
     "youtube_category": "1",
-    "tone": "An original 2D cartoon story for kids and families, simple words, a moral at the end."
+    "tone": "An original 2D cartoon story for kids and families, simple words, a moral at the end.",
+    "style": "2d"
   },
   "3d": {
     "label": "3D cartoon story",
     "visuals": "ai",
-    "ai_style": "3D animated movie render, Pixar-like stylised characters, soft global illumination, high detail",
     "news": false,
     "mood": "playful",
     "youtube_category": "1",
-    "tone": "An original 3D-animation style story with lovable characters and a twist."
+    "tone": "An original 3D-animation style story with lovable characters and a twist.",
+    "style": "3d"
   },
   "horror": {
     "label": "Horror story",
     "visuals": "ai",
-    "ai_style": "dark atmospheric horror film still, fog, moonlight, eerie but not gory",
     "news": false,
     "mood": "tense",
     "youtube_category": "24",
-    "tone": "An original spooky story, suspense over gore. Clearly fiction."
+    "tone": "An original spooky story, suspense over gore. Clearly fiction.",
+    "style": "dark"
   },
   "facts": {
     "label": "Facts / explainer",
@@ -90,11 +90,11 @@
   "mythology": {
     "label": "Mythology",
     "visuals": "ai",
-    "ai_style": "epic Indian mythology painting, divine light, rich colours, detailed",
     "news": false,
     "mood": "emotional",
     "youtube_category": "27",
-    "tone": "A respectful retelling of a well-known Indian mythology story, as told in common tradition."
+    "tone": "A respectful retelling of a well-known Indian mythology story, as told in common tradition.",
+    "style": "mythology"
   },
   "tech": {
     "label": "Tech",

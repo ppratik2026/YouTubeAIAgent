@@ -1,6 +1,7 @@
 #!/bin/sh
 # One-command setup on any fresh Ubuntu / Debian VPS (Hostinger, DigitalOcean, AWS, ...):
 #   git clone https://github.com/ppratik2026/YouTubeAIAgent.git && cd YouTubeAIAgent && sh install.sh
+# With your own cloned voice as well:  sh install.sh clone
 set -e
 cd "$(dirname "$0")"
 
@@ -18,7 +19,13 @@ if [ ! -f .env ]; then
 fi
 
 chmod +x yt
-docker compose up -d --build
+mkdir -p data/voices data/inbox
+if [ "$1" = "clone" ]; then
+  # Voice clone service too (big download the first time: PyTorch + the Chatterbox model)
+  docker compose --profile clone up -d --build
+else
+  docker compose up -d --build
+fi
 echo
 echo "Running. Next:"
 echo "  ./yt add --category news --lang hi --format short --count 10"

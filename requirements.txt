@@ -1,3 +1,4 @@
 requests>=2.31
 edge-tts>=7.0
 tzdata
+faster-whisper>=1.0

@@ -7,3 +7,11 @@ services:
       - ./data:/app/data
       - ./assets/music:/app/assets/music
       - ./config:/app/config
+
+  # Your own cloned voice. Starts only with: docker compose --profile clone up -d
+  voice:
+    build: ./voice
+    profiles: ["clone"]
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data

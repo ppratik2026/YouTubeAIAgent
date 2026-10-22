@@ -8,8 +8,8 @@ category -> topic (Google News / YouTube trends / AI idea)
         -> 5 hooks, scored by hookscore.py        (yt-script skill)
         -> script, scene by scene                  (yt-script skill, Gemini free)
         -> 10 titles, linted by title.py, SEO      (yt-package + yt-seo skills)
-        -> voice per scene                          (edge-tts, free, Hindi + English)
-        -> footage / photos / AI images            (Pexels free, Pollinations free)
+        -> voice per scene                          (edge-tts free, or YOUR cloned voice)
+        -> footage / photos / AI images            (Pexels, Pollinations, Cloudflare - all free)
         -> video + subtitles + music + chapters    (ffmpeg)
         -> upload, within YouTube's daily quota    (YouTube Data API)
 ```
@@ -63,6 +63,9 @@ Recommended: 4 vCPU / 8-16 GB RAM (e.g. Hostinger KVM 4). 2 vCPU bhi chalega, ba
 ./yt categories
 ```
 
+AI image ka look (`./yt styles`): `cinematic realistic 3d anime 2d watercolor comic dark mythology pixel`.
+Kisi bhi category par `--style 3d` lagao to footage ki jagah us style ki AI images aayengi.
+
 Categories: `news crime drama music animation 2d 3d horror facts motivational mythology tech` -
 ya koi bhi naam (`--category "cricket"`), wo bhi chalega. Apni category ka style
 `config/categories.json` mein add/edit karo.
@@ -75,11 +78,49 @@ Ek video turant test karni ho (queue ke bina, upload nahi):
 
 Videos `data/videos/<date-title-id>/` mein: `video.mp4`, `thumbnail.jpg`, `meta.json`, `script.txt`.
 
-## 4. Server badalna
+## 4. Apni awaaz (voice clone)
+
+1. 10-30 second ki saaf recording (shor nahi, ek hi insaan, normal bolna) - WAV best, MP3 bhi chalega.
+2. Server par `data/voices/male.wav` aur `data/voices/female.wav` naam se rakho
+   (WinSCP / FileZilla se, ya `scp male.wav root@SERVER:YouTubeAIAgent/data/voices/`).
+   **Female sample sirf usi ka jisne permission di hai.**
+3. `sh install.sh clone` (pehli baar PyTorch + model download, ~4-5 GB, time lagega).
+4. `./yt voices` -> "voice service: ready".
+5. Job mein `--tts clone`: `./yt add --category drama --lang hi --format short --count 20 --tts clone --voice female`
+   Ya `.env` mein `TTS_PROVIDER=clone` = har video aapki awaaz mein.
+
+Model: [Chatterbox Multilingual](https://huggingface.co/ResembleAI/chatterbox) (MIT, Hindi + English),
+CPU par chalta hai - **slow**: Short theek, 10 min ki video mein ghanta+ lag sakta hai.
+Service band ho ya sample na ho to wo video free Microsoft voice mein banti hai (beech mein awaaz nahi badalti).
+
+## 5. Apni recording se video
+
+Poori script khud record karo (MP3/WAV/M4A), file server ke `data/inbox/` mein daalo, phir:
+
+```sh
+./yt record my-video.mp3 --category drama --lang hi --format long --style cinematic
+```
+
+Awaaz bilkul aapki recording rahegi. Whisper (free, CPU) usse sun kar subtitles + scenes banata hai,
+har scene ki picture lagti hai, title/description banta hai, phir upload. File baad mein `data/inbox/done/` mein.
+
+## 6. Free rehne ke liye (koi paisa nahi, sirf server)
+
+- **Gemini**: sirf script ke liye, free key. App calls ke beech wait karta hai (`GEMINI_MIN_INTERVAL`),
+  per-minute limit par Google ka bataya time rukta hai, aur daily quota khatam hote hi worker pause ho
+  kar agle din continue karta hai - key par zor nahi padta. Gemini ki free key se images nahi banti,
+  isliye images free sources se.
+- **Images**: Pollinations (no key) -> Cloudflare Workers AI (free daily) -> Pexels. Koi image safety se
+  block ho to Gemini prompt ko safe tarike se dobara likhta hai aur phir try hota hai; phir bhi na bane to
+  agla source. Video kabhi beech mein nahi rukti.
+- **Awaaz**: edge-tts free, ya aapki clone voice (aapke server par, free).
+- **Upload**: YouTube API free hai; bas roz ki limit.
+
+## 7. Server badalna
 
 ```sh
 # purane server se
-tar czf backup.tgz .env data assets/music config
+tar czf backup.tgz .env data assets/music config   # data/ mein voices, queue, history sab
 # naye server par: repo clone karo, backup.tgz copy + extract karo, phir
 sh install.sh
 ```

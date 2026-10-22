@@ -50,14 +50,30 @@ MUSIC_DIR = Path(env("MUSIC_DIR", str(ROOT / "assets" / "music")))
 LLM_PROVIDER = env("LLM_PROVIDER", "gemini")
 GEMINI_API_KEY = env("GEMINI_API_KEY")
 GEMINI_MODEL = env("GEMINI_MODEL", "gemini-flash-latest")
+# Stay inside the free tier: seconds between calls, and a daily cap (0 = only Google's own limit).
+GEMINI_MIN_INTERVAL = float(env("GEMINI_MIN_INTERVAL", "8"))
+GEMINI_DAILY_LIMIT = env_int("GEMINI_DAILY_LIMIT", 0)
 
-# Visuals. Free key from pexels.com/api. AI images come from Pollinations (no key).
+# Visuals. Free key from pexels.com/api. AI images: Pollinations (no key) and Cloudflare Workers AI
+# (free daily allowance, needs a free Cloudflare account id + API token).
 PEXELS_API_KEY = env("PEXELS_API_KEY")
 POLLINATIONS_TOKEN = env("POLLINATIONS_TOKEN")
+POLLINATIONS_MODEL = env("POLLINATIONS_MODEL", "flux")
+CF_ACCOUNT_ID = env("CF_ACCOUNT_ID")
+CF_API_TOKEN = env("CF_API_TOKEN")
+CF_IMAGE_MODEL = env("CF_IMAGE_MODEL", "@cf/black-forest-labs/flux-1-schnell")
 VISUALS_OFFLINE = env("VISUALS_OFFLINE") == "1"
 
-# Voice. "edge" (free Microsoft neural voices, Hindi + English) or "offline" for tests.
+# Voice. "edge" (free Microsoft neural voices), "clone" (your own voice samples through the voice
+# service, see voice/), or "offline" for tests.
 TTS_PROVIDER = env("TTS_PROVIDER", "edge")
+VOICE_SERVER = env("VOICE_SERVER", "http://voice:8000")
+VOICES_DIR = DATA_DIR / "voices"
+INBOX_DIR = DATA_DIR / "inbox"
+for d in (VOICES_DIR, INBOX_DIR):
+    d.mkdir(parents=True, exist_ok=True)
+# Your own recordings are transcribed with faster-whisper on the CPU (free, offline).
+WHISPER_MODEL = env("WHISPER_MODEL", "small")
 
 # Trend research (optional). A YouTube Data API *key* from a separate Google Cloud project, so
 # searches do not eat the upload quota.

@@ -4,50 +4,52 @@ import shutil
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from . import render, settings, state, tts, visuals, writer, youtube
-from .util import log, now_iso, slug, write_json
+from . import render, settings, state, transcribe, tts, visuals, writer, youtube
+from .util import log, now_iso, run, slug, write_json
 
 
-def category(name):
+def category(name, style=None):
     cats = settings.load_categories()
     if name in cats:
-        return dict(cats[name], key=name)
-    # Any category the user types works: treated as an original-content explainer with stock footage.
-    return {"key": name, "label": name, "visuals": "stock", "news": False, "mood": "neutral",
-            "youtube_category": "22", "tone": f"An original, engaging video in the '{name}' category."}
+        cat = dict(cats[name], key=name)
+    else:
+        # Any category the user types works: an original-content explainer with stock footage.
+        cat = {"key": name, "label": name, "visuals": "stock", "news": False, "mood": "neutral",
+               "youtube_category": "22", "tone": f"An original, engaging video in the '{name}' category."}
+    if style:  # --style turns any category into AI images in that look
+        cat.update(style=style, visuals="ai")
+    return cat
 
 
-def make_video(job):
-    cat = category(job["category"])
-    lang, fmt = job["language"], job["format"]
-    portrait = fmt == "short"
+def _new_work():
     vid_id = uuid.uuid4().hex[:8]
     work = settings.WORK_DIR / vid_id
     work.mkdir(parents=True, exist_ok=True)
-    log.info("== %s %s %s video (job %s) ==", cat["label"], lang, fmt, job["id"])
+    return vid_id, work
 
-    topic = writer.pick_topic(cat, lang, fmt, state.used_titles(job["category"]))
-    log.info("topic: %s", topic["topic"])
-    hook = writer.best_hook(cat, lang, fmt, topic)[0]
-    script = (writer.write_short(cat, lang, topic, hook) if portrait
-              else writer.write_long(cat, lang, topic, hook, job.get("minutes") or 8))
-    meta = writer.package(cat, lang, fmt, topic, script)
 
-    scenes, starts, used, seed = [], [], set(), visuals.new_seed()
-    gender = job.get("voice") or "male"
+def _pictures(scenes, cat, portrait, work):
+    used, seed = set(), visuals.new_seed()
+    for n, sc in enumerate(scenes):
+        sc["visual"], sc["kind"] = visuals.for_scene(sc, cat, portrait, used, work / f"img{n:03d}", n, seed,
+                                                     rewrite=writer.safe_image_prompt)
+
+
+def _finish(job, cat, vid_id, work, script, meta, topic, gap, hook=None):
+    """Render, thumbnail, description, files, history entry - shared by both kinds of video."""
+    lang, fmt = job["language"], job["format"]
+    portrait = fmt == "short"
+    scenes, starts = [], []
     for sec in script["sections"]:
         starts.append((sec["heading"], len(scenes)))
-        for sc in sec["scenes"]:
-            n = len(scenes)
-            sc["audio"] = tts.speak(sc["narration"], work / f"s{n:03d}.mp3", lang, gender, cat["mood"])
-            sc["visual"], sc["kind"] = visuals.for_scene(sc, cat, portrait, used, work / f"img{n:03d}", n, seed)
-            scenes.append(sc)
+        scenes += sec["scenes"]
     if len(scenes) < 3:
         raise RuntimeError(f"script too short ({len(scenes)} scenes)")
 
     out = settings.VIDEOS_DIR / f"{datetime.now():%Y%m%d-%H%M}-{slug(meta['title'])}-{vid_id}"
     out.mkdir(parents=True)
-    total = render.render(scenes, lang, portrait, cat["mood"], work, out / "video.mp4")
+    total = render.render(scenes, lang, portrait, cat["mood"], work, out / "video.mp4", gap=gap,
+                          music=job.get("music", True))
 
     desc = [meta["description"]]
     if not portrait:
@@ -55,7 +57,7 @@ def make_video(job):
         if ch:
             desc.append(ch)
         render.thumbnail(work / "v000.mp4", meta["thumb_text"] or meta["title"], lang, out / "thumbnail.jpg", work)
-    if topic["facts"]:
+    if topic.get("facts"):
         desc.append("Sources: " + ", ".join(sorted({f["source"] for f in topic["facts"] if f["source"]})))
     if any(s["kind"] == "video" for s in scenes) or cat.get("visuals") == "stock":
         desc.append("Stock footage: Pexels")
@@ -63,8 +65,8 @@ def make_video(job):
         desc.append(settings.CHANNEL_FOOTER)
 
     meta.update(description="\n\n".join(d for d in desc if d).strip(), language=lang,
-                category_id=cat["youtube_category"], duration=round(total, 1), hook=hook["text"],
-                hook_score=hook["score"]["verdict"], topic=topic["topic"])
+                category_id=cat["youtube_category"], duration=round(total, 1), topic=topic["topic"],
+                hook=hook["text"] if hook else "", hook_score=hook["score"]["verdict"] if hook else None)
     (out / "script.txt").write_text("\n\n".join(
         f"## {sec['heading']}\n" + "\n".join(s["narration"] for s in sec["scenes"]) for sec in script["sections"]),
         encoding="utf-8")
@@ -77,6 +79,59 @@ def make_video(job):
              "dir": out.name, "made_at": now_iso(), "status": "ready", "duration": meta["duration"]}
     state.add_history(entry)
     log.info("made %s (%.0fs) -> %s", meta["title"], total, out)
+    return entry
+
+
+def make_video(job):
+    if job.get("recording"):
+        return make_from_recording(job)
+    cat = category(job["category"], job.get("style"))
+    lang, fmt = job["language"], job["format"]
+    portrait = fmt == "short"
+    vid_id, work = _new_work()
+    log.info("== %s %s %s video (job %s) ==", cat["label"], lang, fmt, job["id"])
+
+    topic = writer.pick_topic(cat, lang, fmt, state.used_titles(job["category"]))
+    log.info("topic: %s", topic["topic"])
+    hook = writer.best_hook(cat, lang, fmt, topic)[0]
+    script = (writer.write_short(cat, lang, topic, hook) if portrait
+              else writer.write_long(cat, lang, topic, hook, job.get("minutes") or 8))
+    meta = writer.package(cat, lang, fmt, topic, script)
+
+    gender = job.get("voice") or "male"
+    engine = tts.pick_engine(job.get("tts"), gender)
+    log.info("voice: %s %s", engine, gender)
+    scenes = [sc for sec in script["sections"] for sc in sec["scenes"]]
+    for n, sc in enumerate(scenes):
+        sc["audio"] = tts.speak(sc["narration"], work / f"s{n:03d}", lang, gender, cat["mood"], engine)
+    _pictures(scenes, cat, portrait, work)
+    return _finish(job, cat, vid_id, work, script, meta, topic, render.GAP, hook)
+
+
+def make_from_recording(job):
+    """Your own voiceover file -> scenes from the transcript -> pictures -> video. Your audio is used
+    exactly as recorded; nothing is re-voiced."""
+    rec = settings.INBOX_DIR / job["recording"]
+    if not rec.exists():
+        raise RuntimeError(f"recording not found: {rec}")
+    cat = category(job["category"], job.get("style"))
+    lang, fmt = job["language"], job["format"]
+    vid_id, work = _new_work()
+    log.info("== recording %s -> %s %s %s video ==", rec.name, cat["label"], lang, fmt)
+
+    scenes = transcribe.scenes_from_recording(rec, lang)
+    for n, sc in enumerate(scenes):
+        sc["audio"] = work / f"s{n:03d}.wav"
+        run(["ffmpeg", "-y", "-v", "error", "-ss", f"{sc['start']:.3f}", "-to", f"{sc['end']:.3f}",
+             "-i", str(rec), "-ar", "44100", "-ac", "2", str(sc["audio"])])
+    script = writer.visuals_for_transcript(cat, lang, scenes)
+    topic = {"topic": " ".join(s["narration"] for s in scenes)[:120], "facts": []}
+    meta = writer.package(cat, lang, fmt, topic, script)
+    _pictures(scenes, cat, fmt == "short", work)
+    entry = _finish(job, cat, vid_id, work, script, meta, topic, gap=0.0)
+    done = settings.INBOX_DIR / "done"
+    done.mkdir(exist_ok=True)
+    shutil.move(str(rec), str(done / rec.name))
     return entry
 
 

@@ -188,3 +188,49 @@ def package(cat, language, video_format, topic, script):
     tags = [t.strip()[:30] for t in out.get("tags", []) if t.strip()][:12]
     return {"title": ranked[0]["title"], "thumb_text": ranked[0]["thumb"], "title_options": ranked[:3],
             "description": out.get("description", "").strip(), "tags": tags, "queries": out.get("queries", [])}
+
+
+# ---------- helpers for images and recordings ----------
+
+def safe_image_prompt(prompt):
+    """Reword an image prompt that a generator refused: same scene, nothing graphic, no real people."""
+    try:
+        out = ask_json(
+            "An image generator refused this prompt, most likely its safety filter. Rewrite it to show the "
+            "same moment safely: no blood, injury, weapons pointed at people, nudity, children in danger, "
+            "or real named people - suggest it with mood, shadows, objects and setting instead.\n"
+            f"Prompt: {prompt}\nJSON: {{\"prompt\": \"the new prompt, English, one sentence\"}}",
+            "You rewrite image prompts. Reply with JSON only.",
+            offline=lambda: {"prompt": prompt}, temperature=0.4)
+        return out.get("prompt", "").strip()
+    except Exception as e:  # noqa: BLE001 - a failed rewrite just means: try the next image source
+        log.warning("prompt rewrite failed: %s", e)
+        return ""
+
+
+def visuals_for_transcript(cat, language, scenes):
+    """For your own recording: pick a picture for every scene of what you said."""
+    numbered = "\n".join(f"{i + 1}. {s['narration']}" for i, s in enumerate(scenes))
+    out = ask_json(
+        f"These are the scenes of a recorded {_lang(language)[0]} voiceover, in order:\n{numbered}\n\n"
+        f"For EVERY scene give the picture that should be on screen. Return exactly {len(scenes)} items.\n"
+        f'JSON: {{"scenes": [{{"visual_query": "2-4 English words to search stock footage", '
+        f'"image_prompt": "one detailed English sentence describing the picture"}}], '
+        f'"sections": [{{"heading": "3-5 word chapter title in the video language", "first_scene": 1}}]}}',
+        _system(cat, language), temperature=0.6,
+        offline=lambda: {"scenes": [{"visual_query": "city", "image_prompt": "a city"} for _ in scenes],
+                         "sections": [{"heading": "Start", "first_scene": 1}]})
+    vis = out.get("scenes", [])
+    for i, s in enumerate(scenes):
+        v = vis[i] if i < len(vis) else (vis[-1] if vis else {})
+        s["visual_query"] = v.get("visual_query", "abstract background")
+        s["image_prompt"] = v.get("image_prompt", s["visual_query"])
+    secs = sorted({max(1, min(len(scenes), int(x.get("first_scene", 1)))): x.get("heading", "")
+                   for x in out.get("sections", [])}.items())
+    if not secs or secs[0][0] != 1:
+        secs.insert(0, (1, "Intro"))
+    sections = []
+    for k, (start, heading) in enumerate(secs):
+        end = secs[k + 1][0] - 1 if k + 1 < len(secs) else len(scenes)
+        sections.append({"heading": heading, "scenes": scenes[start - 1:end]})
+    return {"sections": [s for s in sections if s["scenes"]]}

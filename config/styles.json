@@ -1,0 +1,13 @@
+{
+  "_help": "Image looks for AI visuals. Use with --style NAME, or set ai_style in categories.json. Every prompt gets the style text appended.",
+  "cinematic": "cinematic film still, shot on ARRI Alexa, anamorphic lens, dramatic volumetric lighting, rich color grading, ultra detailed, 8k",
+  "realistic": "photorealistic, natural light, high dynamic range, sharp focus, documentary photography, ultra detailed",
+  "3d": "3D animated feature film render, stylised expressive characters, subsurface scattering, soft global illumination, vibrant colours, octane render, ultra detailed",
+  "anime": "modern anime key visual, crisp clean line art, cel shading, vivid colours, dramatic sky, highly detailed background",
+  "2d": "flat 2D vector cartoon illustration, bold clean outlines, bright flat colours, modern children's book style",
+  "watercolor": "hand-painted watercolor anime style, soft pastel colours, lush detailed nature backgrounds, warm gentle light",
+  "comic": "modern comic book art, bold ink lines, halftone shading, dynamic composition, vivid colours",
+  "dark": "dark atmospheric horror film still, fog, cold moonlight, deep shadows, eerie mood, not gory",
+  "mythology": "epic Indian mythology digital painting, divine golden light, ornate details, rich jewel colours, cinematic composition",
+  "pixel": "detailed 16-bit pixel art, vibrant palette, retro game scene"
+}

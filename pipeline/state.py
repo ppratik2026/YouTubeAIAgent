@@ -25,10 +25,10 @@ def locked():
             fcntl.flock(fh, fcntl.LOCK_UN)
 
 
-def add_job(category, language, video_format, count, minutes, voice):
+def add_job(category, language, video_format, count, **options):
+    """options: minutes, voice (male/female), tts (edge/clone), style, recording, music."""
     job = {"id": uuid.uuid4().hex[:8], "category": category, "language": language, "format": video_format,
-           "count": count, "minutes": minutes, "voice": voice, "made": 0, "failed": 0,
-           "status": "active", "created": now_iso()}
+           "count": count, **options, "made": 0, "failed": 0, "status": "active", "created": now_iso()}
     with locked():
         q = read_json(QUEUE, {"jobs": []})
         q["jobs"].append(job)

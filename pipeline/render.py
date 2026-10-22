@@ -96,13 +96,14 @@ def _ff_path(p):
     return str(p).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
 
 
-def render(scenes, language, portrait, mood, work, out_mp4):
-    """scenes: [{narration, audio, visual, kind}] -> fills start/speech/dur, writes out_mp4."""
+def render(scenes, language, portrait, mood, work, out_mp4, gap=GAP, music=True):
+    """scenes: [{narration, audio, visual, kind}] -> fills start/speech/dur, writes out_mp4.
+    gap=0 for your own recordings, whose pauses are already in the audio."""
     work = Path(work)
     segs, wavs, t = [], [], 0.0
     for n, sc in enumerate(scenes):
         sc["speech"] = duration(sc["audio"])
-        sc["dur"] = sc["speech"] + GAP
+        sc["dur"] = sc["speech"] + gap
         sc["start"] = t
         t += sc["dur"]
         wav, seg = work / f"a{n:03d}.wav", work / f"v{n:03d}.mp4"
@@ -121,7 +122,7 @@ def render(scenes, language, portrait, mood, work, out_mp4):
     subs = subtitles(scenes, language, portrait, work / "subs.ass")
 
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", str(work / "visual.mp4"), "-i", str(work / "narration.wav")]
-    music = _music(mood)
+    music = _music(mood) if music else None
     vf = f"[0:v]subtitles='{_ff_path(subs)}'[v]"
     if music:
         cmd += ["-stream_loop", "-1", "-i", str(music)]

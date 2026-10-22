@@ -14,7 +14,7 @@ jobs:
           python-version: "3.12"
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-core
       - run: pip install -r requirements.txt pyflakes
-      - run: python -m pyflakes pipeline scripts
+      - run: python -m pyflakes pipeline scripts voice
       - run: python -m pipeline make --category 2d --lang hi --format short
       - run: python -m pipeline make --category drama --lang en --format long --minutes 2
       - run: docker build -t youtubeaiagent .
