@@ -55,10 +55,13 @@ def _job_args(p, count=True):
     p.add_argument("--style", default=None, help="AI image look, see: styles")
     p.add_argument("--no-music", dest="music", action="store_false")
     p.add_argument("--edit", default=None, help="editing style, see: edits")
+    p.add_argument("--also", action="append", default=[], metavar="LANG:CHANNEL",
+                   help="also make each video in another language for another channel, e.g. en:mychannel_en")
 
 
 def _options(a):
-    return {"minutes": a.minutes, "voice": a.voice, "tts": a.tts, "style": a.style, "music": a.music, "edit": a.edit}
+    return {"minutes": a.minutes, "voice": a.voice, "tts": a.tts, "style": a.style, "music": a.music, "edit": a.edit,
+            "also": a.also}
 
 
 def cmd_add(a):

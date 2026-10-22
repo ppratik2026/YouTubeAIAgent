@@ -7,10 +7,11 @@ uploads on fixed prime-time slots, and topic choice that learns from this channe
 import json
 import shutil
 import uuid
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import insights, quality, render, settings, state, thumbs, transcribe, tts, visuals, writer, youtube
+from . import insights, quality, render, settings, state, thumbs, transcribe, translate, tts, visuals, writer, youtube
 from .util import duration, log, now_iso, read_json, run, slug, write_json
 
 SCHEDULE = settings.DATA_DIR / "schedule.json"
@@ -102,6 +103,9 @@ def _finish(job, cat, vid_id, work, script, meta, topic, gap, hook=None, extra=N
                            "text": s["narration"]} for s in scenes])
     (out / "script.txt").write_text(text, encoding="utf-8")
     write_json(out / "meta.json", meta)
+    if job.get("also"):
+        translate.save_assets(out, script, job["category"], job)
+        translate.queue_versions(out, job, vid_id)
     shutil.rmtree(work, ignore_errors=True)
 
     entry = {"id": vid_id, "job": job["id"], "category": job["category"], "language": lang, "format": fmt,
@@ -117,6 +121,8 @@ def _finish(job, cat, vid_id, work, script, meta, topic, gap, hook=None, extra=N
 def make_video(job):
     if job.get("recording"):
         return make_from_recording(job)
+    if job.get("translate_from"):
+        return make_translation(job)
     cat = category(job["category"], job.get("style"))
     lang, fmt = job["language"], job["format"]
     portrait = fmt == "short"
@@ -162,6 +168,30 @@ def make_video(job):
         state.add_job(job["category"], lang, "short", shorts, from_video=vid_id, voice=job.get("voice"),
                       tts=job.get("tts"), style=job.get("style"), music=job.get("music", True))  # Shorts get their own edit style
         log.info("queued %d Shorts from this video", shorts)
+    return entry
+
+
+def make_translation(job):
+    """Another language version of an existing video, with the same pictures."""
+    src = Path(job["translate_from"])
+    data = translate.load(src, job["language"])
+    cat = category(data["category"], data.get("style"))
+    job = dict(job, edit=job.get("edit") or data.get("edit"), voice=job.get("voice") or data.get("voice"))
+    lang, fmt = job["language"], job["format"]
+    vid_id, work = _new_work()
+    log.info("== %s version of %s ==", lang, src.name)
+    gender = job.get("voice") or "male"
+    engine = tts.pick_engine(job.get("tts"), gender)
+    scenes = [sc for sec in data["sections"] for sc in sec["scenes"]]
+    for n, sc in enumerate(scenes):
+        sc["audio"] = tts.speak(sc["narration"], work / f"s{n:03d}", lang, gender, cat["mood"], engine)
+    script = {"sections": data["sections"]}
+    src_meta = json.loads((src / "meta.json").read_text(encoding="utf-8"))
+    topic = {"topic": src_meta.get("topic", ""), "facts": []}
+    meta = writer.package(cat, lang, fmt, topic, script)
+    entry = _finish(job, cat, vid_id, work, script, meta, topic, render.GAP,
+                    extra={"translated_from": src.name})
+    translate.done_with(src, job["id"])
     return entry
 
 
