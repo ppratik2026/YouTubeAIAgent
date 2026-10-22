@@ -211,8 +211,9 @@ def write_long(cat, language, topic, hook, minutes, structure):
 
 # ---------- 4. packaging ----------
 
-def package(cat, language, video_format, topic, script):
-    full = " ".join(s["narration"] for sec in script["sections"] for s in sec["scenes"])
+def package(cat, language, video_format, topic, script, about=""):
+    full = " ".join(s["narration"] for sec in script["sections"] for s in sec["scenes"]).strip()
+    full = (f"{about}\n{full}" if about else full) or topic["topic"]
     prompt = (
         f"{rules('yt-package')}\n\n{rules('yt-seo')}\n\n"
         f"The video ({'YouTube Short' if video_format == 'short' else 'long video'}): {full[:3000]}\n\n"
@@ -262,11 +263,14 @@ def safe_image_prompt(prompt):
         return ""
 
 
-def visuals_for_transcript(cat, language, scenes):
-    """For your own recording: pick a picture for every scene of what you said."""
-    numbered = "\n".join(f"{i + 1}. {s['narration']}" for i, s in enumerate(scenes))
+def visuals_for_transcript(cat, language, scenes, about=""):
+    """For your own recording or song: pick a picture for every scene of what is heard."""
+    numbered = "\n".join(f"{i + 1}. {s['narration'] or '(music only)'}" for i, s in enumerate(scenes))
+    about = f"It is about: {about}\n" if about else ""
     out = ask_json(
-        f"These are the scenes of a recorded {_lang(language)[0]} voiceover, in order:\n{numbered}\n\n"
+        f"These are the scenes of a recorded {_lang(language)[0]} audio, in order:\n{numbered}\n{about}\n"
+        "Pictures should follow the words; for music-only parts keep the mood with calm, beautiful scenes "
+        "that change slowly.\n"
         f"For EVERY scene give the picture that should be on screen. Return exactly {len(scenes)} items.\n"
         f'JSON: {{"scenes": [{{"visual_query": "2-4 English words to search stock footage", '
         f'"image_prompt": "one detailed English sentence describing the picture"}}], '

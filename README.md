@@ -67,7 +67,7 @@ AI image ka look (`./yt styles`): `cinematic realistic 3d anime 2d watercolor co
 Kisi bhi category par `--style 3d` lagao to footage ki jagah us style ki AI images aayengi.
 
 Categories: `news crime drama music animation 2d 3d horror facts motivational mythology tech` -
-ya koi bhi naam (`--category "cricket"`), wo bhi chalega. Apni category ka style
+`devotional bhajan` - ya koi bhi naam (`--category "cricket"`), wo bhi chalega. Apni category ka style
 `config/categories.json` mein add/edit karo.
 
 Ek video turant test karni ho (queue ke bina, upload nahi):
@@ -150,7 +150,68 @@ dobara chalao aur naya `YT_REFRESH_TOKEN` daalo.
 - Comments ka jawab khud do (`/yt-comment` skill draft deta hai).
 - Health, finance, legal mein "expert advice" mat do.
 
-## 8. Server badalna
+## 8. Kai channels ek server par
+
+```sh
+./yt channel-add bhakti          # data/channels/bhakti/ banta hai
+./yt channel-add newshindi
+./yt channels                    # har channel: kitni banani baaki, ready, uploaded
+./yt --channel bhakti add --category devotional --lang hi --format long --count 30
+./yt --channel newshindi add --category news --lang hi --format short --count 50
+./yt --channel bhakti review     # har command --channel ke saath us channel par chalti hai
+```
+
+Har channel ka apna folder `data/channels/<name>/`:
+
+| File | Kya |
+|---|---|
+| `channel.json` | us channel ki pehchaan: niche, host, publish time, quality_min |
+| `channel.env` | us channel ka `YT_REFRESH_TOKEN` (get_refresh_token.py chala kar **us channel ka** account chuno) + jo setting alag ho |
+| `voices/male.wav`, `female.wav` | us channel ki clone awaaz (na ho to main `data/voices/` wali) |
+| `inbox/` | us channel ki recordings / bhajan files |
+| queue, history, videos, logs | sab alag |
+
+Worker saare channels ko **baari-baari** chalata hai: har channel ki ek video aur ek upload, phir agla channel -
+taaki ek channel ka 100 video ka job baaki channels ko na roke.
+
+**Shared limits (dhyan do):**
+- YouTube upload quota **Google Cloud project** ka hota hai, channel ka nahi. Sab channels ek hi OAuth
+  client use karein to roz ~6 uploads **sab channels mila ke**. Zyada chahiye to project ka quota increase
+  maango (free form). Har channel ke liye alag project bana kar limit todna YouTube API policy ke khilaf
+  ho sakta hai - quota increase sahi raasta hai.
+- Gemini free key bhi sab channels share karte hain (calls `./yt list` mein dikhti hain).
+
+## 9. Music / devotional channel
+
+Music ka matlab yahan teen alag cheezein hain:
+
+| Kya chahiye | Kaise | Category |
+|---|---|---|
+| Bhakti kahaniyan, mantra/aarti ka arth, tyohar ki katha (narration) | Poora auto, jaise baaki categories. Devotional style images + shant music | `devotional` |
+| Music ke baare mein - gaane/raag/gayak ki kahani | Poora auto, narration. Copyright gaane ke lyrics nahi bolta, gaana nahi bajata | `music` |
+| **Asli bhajan / gaana** (aapka gaya hua, ya jiske rights aapke paas hain) | Aap audio do, app usse music video banata hai: lyrics screen par, har line par nayi picture, title/description | `bhajan` + `record --song` |
+
+```sh
+# bhajan.mp3 + bhajan.lrc ko data/channels/bhakti/inbox/ mein daalo, phir:
+./yt --channel bhakti record bhajan.mp3 --song --lyrics bhajan.lrc --title "Shiv bhajan" --category bhajan --format long
+# lyrics na ho (instrumental / flute / dhun): bina --lyrics, har ~10 sec nayi picture
+./yt --channel bhakti record dhun.mp3 --song --title "Morning flute" --category bhajan --format long
+```
+
+- `.lrc` = har line ka time (`[00:07.50] हर हर महादेव`) - lyrics bilkul gaane ke saath chalte hain.
+  `.txt` bhi chalega (line per line), lekin timing andaze se hogi.
+- Gaane par background music nahi lagta. Audio bilkul aapka.
+
+**Kya nahi hoga, aur kyun:**
+- **App khud bhajan/gaana nahi gaata.** Free + commercial use wala koi achha music AI CPU par nahi chalta
+  (MusicGen jaise free models ka license commercial use nahi deta, ACE-Step jaise ko GPU chahiye).
+- **Kisi aur ka bhajan / film song / T-Series wagairah ki recording mat daalo** - Content ID claim aata hai,
+  paisa unko jata hai, aur zyada hue to channel par strike. Purane bhajan/mantra ke **shabd** (jaise Hanuman
+  Chalisa) public domain hain, lekin unki **recording** kisi ki hoti hai - apni ya licensed recording hi use karo.
+- 1-1 ghante ke "mantra jaap loop" channels ko YouTube aksar "repetitive / reused content" maan kar monetize
+  nahi karta. Apni recording + katha/arth wali videos mix karo.
+
+## 10. Server badalna
 
 ```sh
 # purane server se

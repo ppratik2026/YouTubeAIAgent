@@ -33,7 +33,7 @@
     "news": false,
     "mood": "uplifting",
     "youtube_category": "10",
-    "tone": "Stories and facts about songs, singers, ragas and music history. Do not quote song lyrics (copyright). Do not play any copyrighted song."
+    "tone": "Stories behind songs, singers, ragas and instruments, and music history. Do not quote copyrighted song lyrics. Never play a copyrighted song."
   },
   "animation": {
     "label": "Animated story",
@@ -104,5 +104,23 @@
     "mood": "neutral",
     "youtube_category": "28",
     "tone": "A clear tech news explainer for normal people. Only facts from the sources given."
+  },
+  "devotional": {
+    "label": "Devotional / Bhakti",
+    "visuals": "ai",
+    "style": "devotional",
+    "news": false,
+    "mood": "emotional",
+    "youtube_category": "27",
+    "tone": "Respectful bhakti content: stories of saints and deities as told in common tradition, the meaning of well-known mantras, aartis and festivals, and what they teach for daily life. Calm, warm, sincere. Never mock any faith, never claim miracles or cures as fact, never make health or money promises."
+  },
+  "bhajan": {
+    "label": "Bhajan / music video",
+    "visuals": "ai",
+    "style": "devotional",
+    "news": false,
+    "mood": "emotional",
+    "youtube_category": "10",
+    "tone": "A devotional music video. The audio is the creator's own song or a track they have the rights to; the job here is only pictures, lyrics on screen, title and description."
   }
 }

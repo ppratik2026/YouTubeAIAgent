@@ -27,6 +27,11 @@ def voice_for(language, gender):
         (language, gender), VOICES[("en", "male")])
 
 
+def voice_key(gender):
+    """Name of the sample on the voice service: '<channel>/<gender>' for a channel's own voice."""
+    return f"{settings.CHANNEL}/{gender}" if settings.CHANNEL else gender
+
+
 def pick_engine(requested, gender):
     """'clone' only if the voice service answers and has a sample for this voice; else 'edge'."""
     engine = requested or settings.TTS_PROVIDER
@@ -39,8 +44,9 @@ def pick_engine(requested, gender):
     except Exception as e:  # noqa: BLE001
         log.warning("voice service not reachable (%s) - using the %s voice for this video", e, fallback)
         return fallback
-    if gender not in voices:
-        log.warning("no voice sample data/voices/%s.wav - using the %s voice for this video", gender, fallback)
+    if voice_key(gender) not in voices and gender not in voices:
+        log.warning("no voice sample %s/voices/%s.wav - using the %s voice for this video",
+                    settings.DATA_DIR, gender, fallback)
         return fallback
     return "clone"
 
@@ -56,7 +62,7 @@ def _edge(text, voice, rate, pitch, out):
 def _clone(text, language, gender, exaggeration, out):
     # CPU generation is slow: a long sentence can take a minute or more.
     r = HTTP.post(f"{settings.VOICE_SERVER}/tts", timeout=900, json={
-        "text": text, "language": language, "voice": gender, "exaggeration": exaggeration})
+        "text": text, "language": language, "voice": voice_key(gender), "exaggeration": exaggeration})
     if r.status_code != 200:
         raise RuntimeError(f"voice service {r.status_code}: {r.text[:300]}")
     out.write_bytes(r.content)

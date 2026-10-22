@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from . import insights, quality, render, settings, state, transcribe, tts, visuals, writer, youtube
-from .util import log, now_iso, read_json, run, slug, write_json
+from .util import duration, log, now_iso, read_json, run, slug, write_json
 
 SCHEDULE = settings.DATA_DIR / "schedule.json"
 
@@ -155,29 +155,45 @@ def make_video(job):
 
 
 def make_from_recording(job):
-    """Your own voiceover file -> scenes from the transcript -> pictures -> video. Your audio is used
-    exactly as recorded; nothing is re-voiced."""
+    """Your own audio file -> video. The audio is used exactly as given; nothing is re-voiced.
+
+    speech (default): whisper transcribes it -> scenes, subtitles, pictures
+    song (--song):    a bhajan / song / instrumental you own or may use. Lyrics come from your .lrc
+                      (timed) or .txt file, or none for instrumental; no background music is added."""
     rec = settings.INBOX_DIR / job["recording"]
     if not rec.exists():
         raise RuntimeError(f"recording not found: {rec}")
     cat = category(job["category"], job.get("style"))
     lang, fmt = job["language"], job["format"]
     vid_id, work = _new_work()
-    log.info("== recording %s -> %s %s %s video ==", rec.name, cat["label"], lang, fmt)
+    song = bool(job.get("song"))
+    log.info("== %s %s -> %s %s %s video ==", "song" if song else "recording", rec.name, cat["label"], lang, fmt)
 
-    scenes = transcribe.scenes_from_recording(rec, lang)
+    if song:
+        total = duration(rec)
+        lyrics = settings.INBOX_DIR / job["lyrics"] if job.get("lyrics") else None
+        scenes = (transcribe.scenes_from_lyrics(lyrics, total) if lyrics and lyrics.exists()
+                  else transcribe.instrumental_scenes(total))
+        job = dict(job, music=False)  # never lay music over a song
+    else:
+        scenes = transcribe.scenes_from_recording(rec, lang)
     for n, sc in enumerate(scenes):
         sc["audio"] = work / f"s{n:03d}.wav"
         run(["ffmpeg", "-y", "-v", "error", "-ss", f"{sc['start']:.3f}", "-to", f"{sc['end']:.3f}",
              "-i", str(rec), "-ar", "44100", "-ac", "2", str(sc["audio"])])
-    script = writer.visuals_for_transcript(cat, lang, scenes)
-    topic = {"topic": " ".join(s["narration"] for s in scenes)[:120], "facts": []}
-    meta = writer.package(cat, lang, fmt, topic, script)
+    about = job.get("title_hint") or ""
+    script = writer.visuals_for_transcript(cat, lang, scenes, about)
+    words = " ".join(s["narration"] for s in scenes).strip()
+    topic = {"topic": (about or words or rec.stem)[:120], "facts": []}
+    meta = writer.package(cat, lang, fmt, topic, script, about)
     _pictures(scenes, cat, fmt == "short", work)
-    entry = _finish(job, cat, vid_id, work, script, meta, topic, gap=0.0, extra={"own_voice": True})
+    entry = _finish(job, cat, vid_id, work, script, meta, topic, gap=0.0,
+                    extra={"own_voice": not song, "song": song})
     done = settings.INBOX_DIR / "done"
     done.mkdir(exist_ok=True)
-    shutil.move(str(rec), str(done / rec.name))
+    for f in (rec, settings.INBOX_DIR / job["lyrics"] if job.get("lyrics") else None):
+        if f and f.exists():
+            shutil.move(str(f), str(done / f.name))
     return entry
 
 
@@ -214,15 +230,16 @@ def _publish_at(done):
     return _next_slot()
 
 
-def upload_ready():
-    """Upload finished videos, oldest first, as far as today's quota allows."""
+def upload_ready(max_uploads=None):
+    """Upload finished videos, oldest first, as far as today's quota allows (and at most max_uploads,
+    so channels sharing a quota take turns)."""
     if not (settings.AUTO_UPLOAD and youtube.configured()):
         return 0
     done = 0
     hist = state.history()
     by_id = {e["id"]: e for e in hist}
     for e in [e for e in hist if e["status"] == "ready"]:
-        if state.uploads_left() <= 0:
+        if state.uploads_left() <= 0 or (max_uploads is not None and done >= max_uploads):
             break
         parent = by_id.get(e.get("parent") or "")
         if parent and parent["status"] in ("ready", "review"):

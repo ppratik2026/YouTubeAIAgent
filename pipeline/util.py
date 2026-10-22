@@ -19,7 +19,7 @@ HTTP.headers["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) YouTubeAIAgent/1.0
 
 
 def setup_logging():
-    fmt = "%(asctime)s %(levelname)s %(message)s"
+    fmt = f"%(asctime)s %(levelname)s {('[' + settings.CHANNEL + '] ') if settings.CHANNEL else ''}%(message)s"
     logging.basicConfig(level=logging.INFO, format=fmt, handlers=[
         logging.StreamHandler(),
         logging.FileHandler(settings.LOG_DIR / "pipeline.log", encoding="utf-8"),

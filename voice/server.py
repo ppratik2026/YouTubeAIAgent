@@ -19,7 +19,8 @@ import soundfile
 import torch
 from chatterbox.mtl_tts import ChatterboxMultilingualTTS
 
-VOICES = Path(os.environ.get("DATA_DIR", "/app/data")) / "voices"
+DATA = Path(os.environ.get("DATA_DIR", "/app/data"))
+VOICES = DATA / "voices"
 torch.set_num_threads(os.cpu_count() or 4)
 print("loading Chatterbox Multilingual (first start downloads the model once)...", flush=True)
 MODEL = ChatterboxMultilingualTTS.from_pretrained(device="cpu")
@@ -28,12 +29,28 @@ CURRENT = {}  # which voice sample the model is conditioned on right now
 print("voice service ready", flush=True)
 
 
+EXTS = (".wav", ".mp3", ".m4a", ".flac", ".ogg")
+
+
 def sample(voice):
-    for ext in (".wav", ".mp3", ".m4a", ".flac", ".ogg"):
-        p = VOICES / f"{voice}{ext}"
-        if p.exists():
-            return p
+    """'female' -> data/voices/female.wav; 'bhakti/female' -> data/channels/bhakti/voices/female.wav,
+    falling back to the shared one."""
+    ch, _, name = voice.rpartition("/")
+    folders = ([DATA / "channels" / ch / "voices"] if ch else []) + [VOICES]
+    for folder in folders:
+        for ext in EXTS:
+            p = folder / f"{name}{ext}"
+            if p.exists():
+                return p
     return None
+
+
+def all_voices():
+    names = {p.stem for p in VOICES.glob("*") if p.suffix in EXTS}
+    for p in DATA.glob("channels/*/voices/*"):
+        if p.suffix in EXTS:
+            names.add(f"{p.parent.parent.name}/{p.stem}")
+    return sorted(names)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -46,8 +63,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/health":
-            voices = sorted({p.stem for p in VOICES.glob("*") if p.is_file()})
-            return self._send(200, json.dumps({"ok": True, "voices": voices}).encode())
+            return self._send(200, json.dumps({"ok": True, "voices": all_voices()}).encode())
         self._send(404, b"{}")
 
     def do_POST(self):

@@ -1,6 +1,7 @@
 """The queue, the history of every video, and today's upload count - three JSON files in DATA_DIR.
 A file lock keeps the CLI and the worker from overwriting each other."""
 import fcntl
+import hashlib
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
@@ -11,8 +12,10 @@ from .util import now_iso, read_json, write_json
 
 QUEUE = settings.DATA_DIR / "queue.json"
 HISTORY = settings.DATA_DIR / "history.json"
-QUOTA = settings.DATA_DIR / "quota.json"
-LOCK = settings.DATA_DIR / ".lock"
+# YouTube counts quota per Google Cloud project (= per OAuth client), so channels that share a client
+# share one counter.
+QUOTA = settings.SHARED_DIR / f"quota-{hashlib.sha1(settings.YT_CLIENT_ID.encode()).hexdigest()[:8]}.json"
+LOCK = settings.SHARED_DIR / ".lock"
 
 
 @contextmanager

@@ -14,7 +14,7 @@ from . import settings
 from .util import HTTP, log, read_json, write_json
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-COUNTER = settings.DATA_DIR / "gemini_usage.json"
+COUNTER = settings.SHARED_DIR / "gemini_usage.json"  # one key for all channels
 _last_call = [0.0]
 
 

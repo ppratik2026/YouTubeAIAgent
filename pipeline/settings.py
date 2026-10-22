@@ -2,6 +2,11 @@
 
 Everything the app writes lives under DATA_DIR, so moving to another server is: copy .env and the
 data folder, then start the container again.
+
+Several channels: each one is a folder data/channels/<name>/ with its own channel.json (identity),
+channel.env (its YouTube login and any setting that differs), voices, queue and history. Pick one with
+CHANNEL=<name> (the CLI's --channel). What Google counts per project - the YouTube upload quota and
+the Gemini free tier - is shared by all channels and lives in the top data folder.
 """
 import json
 import os
@@ -10,7 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def _load_dotenv(path):
+def _load_dotenv(path, override=False):
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -19,10 +24,20 @@ def _load_dotenv(path):
             continue
         k, v = line.split("=", 1)
         k, v = k.strip(), v.strip().strip('"').strip("'")
-        os.environ.setdefault(k, v)
+        if override:
+            os.environ[k] = v
+        else:
+            os.environ.setdefault(k, v)
 
 
 _load_dotenv(ROOT / ".env")
+CHANNEL = os.environ.get("CHANNEL", "").strip()
+SHARED_DIR = Path(os.environ.get("DATA_DIR", str(ROOT / "data"))).resolve()
+CHANNELS_DIR = SHARED_DIR / "channels"
+if CHANNEL:
+    if not (CHANNELS_DIR / CHANNEL).is_dir():
+        raise SystemExit(f"no channel '{CHANNEL}' - create it with: ./yt channel-add {CHANNEL}")
+    _load_dotenv(CHANNELS_DIR / CHANNEL / "channel.env", override=True)
 
 
 def env(name, default=""):
@@ -36,7 +51,7 @@ def env_int(name, default):
         return default
 
 
-DATA_DIR = Path(env("DATA_DIR", str(ROOT / "data"))).resolve()
+DATA_DIR = CHANNELS_DIR / CHANNEL if CHANNEL else SHARED_DIR
 VIDEOS_DIR = DATA_DIR / "videos"
 WORK_DIR = DATA_DIR / "work"
 LOG_DIR = DATA_DIR / "logs"
@@ -103,5 +118,11 @@ def load_categories():
 
 
 def load_channel():
-    p = ROOT / "config" / "channel.json"
-    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    for p in (DATA_DIR / "channel.json", ROOT / "config" / "channel.json"):
+        if p.exists():
+            return json.loads(p.read_text(encoding="utf-8"))
+    return {}
+
+
+def channels():
+    return sorted(p.name for p in CHANNELS_DIR.glob("*") if (p / "channel.json").exists())
