@@ -221,9 +221,11 @@ def package(cat, language, video_format, topic, script, about=""):
         "Write TEN title options (each with its own thumbnail text, max 3 words, different words from the "
         "title), in the video language. Then the description: the first two lines say what the viewer gets "
         "in the words they would search; then 3-5 short lines more. Then up to 12 tags (spellings, names, "
-        "the words people type). Then the 3 search queries this should win.\n"
-        'JSON: {"titles": [{"title": "...", "thumb": "..."}], "description": "...", "tags": ["..."], '
-        '"queries": ["..."]}'
+        "the words people type). Then the 3 search queries this should win. Then one English image prompt "
+        "for the thumbnail background: a close-up subject with a strong emotion or a striking object, high "
+        "contrast, bright colours, the left half kept simple for big text, no words in the image.\n"
+        'JSON: {"titles": [{"title": "...", "thumb": "...", "highlight": ["the one thumbnail word to colour"]}], '
+        '"description": "...", "tags": ["..."], "queries": ["..."], "thumb_prompt": "..."}'
     )
     out = ask_json(prompt, _system(cat, language), temperature=0.8, offline=lambda: {
         "titles": [{"title": f"{topic['topic'][:50]} - 3 things nobody told you", "thumb": "NOBODY SAW"},
@@ -236,13 +238,14 @@ def package(cat, language, video_format, topic, script, about=""):
             title = (title[:91] + " #Shorts") if len(title) > 91 else title + " #Shorts"
         r = lint_title(title, t.get("thumb"))
         ranked.append({"title": title, "thumb": t.get("thumb", ""), "score": r["score"],
-                       "issues": [m for _, m in r["issues"]]})
+                       "highlight": t.get("highlight") or [], "issues": [m for _, m in r["issues"]]})
     if not ranked:
         raise RuntimeError("model returned no titles")
     ranked.sort(key=lambda r: -r["score"])
     log.info("title: %s (%s)", ranked[0]["title"], ranked[0]["score"])
     tags = [t.strip()[:30] for t in out.get("tags", []) if t.strip()][:12]
     return {"title": ranked[0]["title"], "thumb_text": ranked[0]["thumb"], "title_options": ranked[:3],
+            "thumb_highlight": ranked[0]["highlight"], "thumb_prompt": out.get("thumb_prompt", ""),
             "description": out.get("description", "").strip(), "tags": tags, "queries": out.get("queries", [])}
 
 

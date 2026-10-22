@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from . import insights, quality, render, settings, state, transcribe, tts, visuals, writer, youtube
+from . import insights, quality, render, settings, state, thumbs, transcribe, tts, visuals, writer, youtube
 from .util import duration, log, now_iso, read_json, run, slug, write_json
 
 SCHEDULE = settings.DATA_DIR / "schedule.json"
@@ -78,7 +78,7 @@ def _finish(job, cat, vid_id, work, script, meta, topic, gap, hook=None, extra=N
         ch = render.chapters([(h, scenes[i]["start"]) for h, i in starts], total)
         if ch:
             desc.append(ch)
-        render.thumbnail(work / "v000.mp4", meta["thumb_text"] or meta["title"], lang, out / "thumbnail.jpg", work)
+        thumbs.make(meta, scenes, cat, lang, work, out)
     if topic.get("facts"):
         desc.append("Sources: " + ", ".join(sorted({f["source"] for f in topic["facts"] if f["source"]})))
     if any(s["kind"] == "video" for s in scenes) or cat.get("visuals") == "stock":

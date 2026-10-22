@@ -347,25 +347,6 @@ def render(scenes, language, portrait, mood, work, out_mp4, gap=GAP, music=True,
     return total
 
 
-def thumbnail(first_segment, text, language, out_jpg, work):
-    """1280x720 frame from the opening scene with the thumbnail text (max 3 words) on it.
-    Text goes through libass so Hindi is shaped correctly."""
-    ass = Path(work) / "thumb.ass"
-    ass.write_text(
-        "[Script Info]\nScriptType: v4.00+\nPlayResX: 1280\nPlayResY: 720\n\n[V4+ Styles]\n"
-        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, "
-        "Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
-        "Alignment, MarginL, MarginR, MarginV, Encoding\n"
-        f"Style: T,{font_for(language)},120,&H0000F0FF,&H0000F0FF,&H00000000,&HA0000000,1,0,0,0,100,100,0,0,1,9,4,1,"
-        "50,50,50,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
-        f"Dialogue: 0,0:00:00.00,9:00:00.00,T,,0,0,0,,{_clean(text).upper()}\n", encoding="utf-8")
-    vf = (f"scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,eq=contrast=1.12:saturation=1.25,"
-          f"vignette=PI/5,subtitles='{_ff_path(ass)}'")
-    run(["ffmpeg", "-y", "-v", "error", "-ss", "0.5", "-i", str(first_segment), "-vf", vf, "-frames:v", "1",
-         "-q:v", "3", str(out_jpg)])
-    return out_jpg
-
-
 def chapters(section_starts, total):
     """YouTube only renders chapters when: first at 0:00, at least 3, each at least 10 s."""
     pts = []
