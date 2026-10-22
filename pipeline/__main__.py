@@ -1,7 +1,7 @@
 """python -m pipeline [--channel NAME] <command>
 
   add     --category crime --lang hi --format long --count 100 [--minutes 8] [--voice female]
-          [--tts clone] [--style 3d] [--no-music]
+          [--tts clone] [--style 3d] [--edit energetic] [--no-music]
   record  FILE --category drama --lang hi --format long [--style cinematic]
           (your own voiceover file -> video; FILE can be a path or a name inside data/inbox/)
   record  FILE --song --category bhajan --format long [--lyrics FILE.lrc] [--title "Shiv bhajan"]
@@ -15,7 +15,7 @@
   progress                  subscribers / watch hours / Shorts views vs monetization
   worker                    run forever: make queued videos, upload, sleep (all channels, in turn)
   channels                  list channels;   channel-add NAME   make a new one
-  categories | styles | voices
+  categories | styles | edits | voices
 """
 import argparse
 import json
@@ -51,10 +51,11 @@ def _job_args(p, count=True):
                    help="clone = your voice sample in data/voices/<voice>.wav")
     p.add_argument("--style", default=None, help="AI image look, see: styles")
     p.add_argument("--no-music", dest="music", action="store_false")
+    p.add_argument("--edit", default=None, help="editing style, see: edits")
 
 
 def _options(a):
-    return {"minutes": a.minutes, "voice": a.voice, "tts": a.tts, "style": a.style, "music": a.music}
+    return {"minutes": a.minutes, "voice": a.voice, "tts": a.tts, "style": a.style, "music": a.music, "edit": a.edit}
 
 
 def cmd_add(a):
@@ -260,6 +261,11 @@ def main(argv=None):
     sub.add_parser("voices").set_defaults(fn=cmd_voices)
     sub.add_parser("categories").set_defaults(fn=lambda a: _print_json_keys(settings.ROOT / "config/categories.json"))
     sub.add_parser("styles").set_defaults(fn=lambda a: _print_json_keys(settings.ROOT / "config/styles.json"))
+    sub.add_parser("edits").set_defaults(fn=lambda a: [
+        print(f"{k:<11} {', '.join(v['transitions'][:4])} | {v['captions']} captions | grade {v['grade']}"
+              f"{' | whoosh' if v['sfx'] else ''}{' | punch zoom' if v['punch'] else ''}"
+              f"{' | progress bar' if v['progress'] else ''}")
+        for k, v in json.loads((settings.ROOT / "config/edits.json").read_text()).items() if not k.startswith("_")])
     a = ap.parse_args(argv)
     a.fn(a)
 

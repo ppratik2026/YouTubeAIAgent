@@ -1,5 +1,5 @@
 {
-  "_help": "Add your own category by copying any block. visuals: stock = real footage from Pexels, ai = AI images in the look named by style (see styles.json). news: true = facts come from today's news (Google News RSS) and the script may only use those facts. youtube_category: YouTube's category id. mood picks voice pace and assets/music/<mood>/.",
+  "_help": "Add your own category by copying any block. visuals: stock = real footage from Pexels, ai = AI images in the look named by style (see styles.json). news: true = facts come from today's news (Google News RSS) and the script may only use those facts. youtube_category: YouTube's category id. mood picks voice pace and assets/music/<mood>/. edit: editing style from edits.json (default: energetic for Shorts, cinematic for long).",
   "news": {
     "label": "News",
     "visuals": "stock",
@@ -7,7 +7,8 @@
     "news_query": "",
     "mood": "neutral",
     "youtube_category": "25",
-    "tone": "A clear, neutral news explainer. Only facts from the sources given. Say who reported what. No opinions, no speculation."
+    "tone": "A clear, neutral news explainer. Only facts from the sources given. Say who reported what. No opinions, no speculation.",
+    "edit": "news"
   },
   "crime": {
     "label": "Crime",
@@ -16,7 +17,8 @@
     "news_query": "crime case police investigation",
     "mood": "tense",
     "youtube_category": "25",
-    "tone": "A calm, serious true-crime explainer of a publicly reported case. Only facts from the sources given. Use 'accused' / 'police say' wording. Never name victims who are minors, never show or describe gore, never claim guilt that a court has not decided."
+    "tone": "A calm, serious true-crime explainer of a publicly reported case. Only facts from the sources given. Use 'accused' / 'police say' wording. Never name victims who are minors, never show or describe gore, never claim guilt that a court has not decided.",
+    "edit": "news"
   },
   "drama": {
     "label": "Drama story",
@@ -25,7 +27,8 @@
     "mood": "emotional",
     "youtube_category": "24",
     "tone": "An original fictional family/relationship drama with a twist, told by a narrator. Clearly fiction. Emotional, simple language.",
-    "style": "cinematic"
+    "style": "cinematic",
+    "edit": "cinematic"
   },
   "music": {
     "label": "Music stories",
@@ -69,7 +72,8 @@
     "mood": "tense",
     "youtube_category": "24",
     "tone": "An original spooky story, suspense over gore. Clearly fiction.",
-    "style": "dark"
+    "style": "dark",
+    "edit": "dark"
   },
   "facts": {
     "label": "Facts / explainer",
@@ -94,7 +98,8 @@
     "mood": "emotional",
     "youtube_category": "27",
     "tone": "A respectful retelling of a well-known Indian mythology story, as told in common tradition.",
-    "style": "mythology"
+    "style": "mythology",
+    "edit": "calm"
   },
   "tech": {
     "label": "Tech",
@@ -103,7 +108,8 @@
     "news_query": "technology AI smartphone launch",
     "mood": "neutral",
     "youtube_category": "28",
-    "tone": "A clear tech news explainer for normal people. Only facts from the sources given."
+    "tone": "A clear tech news explainer for normal people. Only facts from the sources given.",
+    "edit": "news"
   },
   "devotional": {
     "label": "Devotional / Bhakti",
@@ -112,7 +118,8 @@
     "news": false,
     "mood": "emotional",
     "youtube_category": "27",
-    "tone": "Respectful bhakti content: stories of saints and deities as told in common tradition, the meaning of well-known mantras, aartis and festivals, and what they teach for daily life. Calm, warm, sincere. Never mock any faith, never claim miracles or cures as fact, never make health or money promises."
+    "tone": "Respectful bhakti content: stories of saints and deities as told in common tradition, the meaning of well-known mantras, aartis and festivals, and what they teach for daily life. Calm, warm, sincere. Never mock any faith, never claim miracles or cures as fact, never make health or money promises.",
+    "edit": "calm"
   },
   "bhajan": {
     "label": "Bhajan / music video",
@@ -121,6 +128,7 @@
     "news": false,
     "mood": "emotional",
     "youtube_category": "10",
-    "tone": "A devotional music video. The audio is the creator's own song or a track they have the rights to; the job here is only pictures, lyrics on screen, title and description."
+    "tone": "A devotional music video. The audio is the creator's own song or a track they have the rights to; the job here is only pictures, lyrics on screen, title and description.",
+    "edit": "karaoke"
   }
 }

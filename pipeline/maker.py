@@ -67,8 +67,11 @@ def _finish(job, cat, vid_id, work, script, meta, topic, gap, hook=None, extra=N
     similar, similar_to = quality.most_similar(text, job["category"])
     out = settings.VIDEOS_DIR / f"{datetime.now():%Y%m%d-%H%M}-{slug(meta['title'])}-{vid_id}"
     out.mkdir(parents=True)
+    style = job.get("edit") or cat.get("edit") or ("energetic" if portrait else "cinematic")
+    if job.get("song"):
+        style = job.get("edit") or ("karaoke" if job.get("lyrics") else "calm")
     total = render.render(scenes, lang, portrait, cat["mood"], work, out / "video.mp4", gap=gap,
-                          music=job.get("music", True))
+                          music=job.get("music", True), style=style)
 
     desc = [meta["description"]]
     if not portrait:
@@ -102,7 +105,7 @@ def _finish(job, cat, vid_id, work, script, meta, topic, gap, hook=None, extra=N
              "topic": topic["topic"], "source_title": topic.get("source_title", ""), "title": meta["title"],
              # dir is relative, so data/ can move to another server
              "dir": out.name, "made_at": now_iso(), "status": status, "duration": meta["duration"],
-             "quality": score, **(extra or {})}
+             "quality": score, "edit": style, **(extra or {})}
     state.add_history(entry)
     log.info("made %s (%.0fs, quality %s) -> %s", meta["title"], total, score, out)
     return entry
@@ -149,7 +152,7 @@ def make_video(job):
     if fmt == "long" and shorts > 0 and job["id"] != "manual":
         # Shorts pull new viewers to the long video, which is where watch hours come from.
         state.add_job(job["category"], lang, "short", shorts, from_video=vid_id, voice=job.get("voice"),
-                      tts=job.get("tts"), style=job.get("style"), music=job.get("music", True))
+                      tts=job.get("tts"), style=job.get("style"), music=job.get("music", True))  # Shorts get their own edit style
         log.info("queued %d Shorts from this video", shorts)
     return entry
 

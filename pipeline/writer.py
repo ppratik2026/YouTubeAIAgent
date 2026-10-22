@@ -144,7 +144,8 @@ def best_hook(cat, language, video_format, topic, recent_formulas=()):
 
 # ---------- 3. script ----------
 
-SCENE_JSON = ('{"narration": "1-2 spoken sentences", "visual_query": "2-4 English words to search '
+SCENE_JSON = ('{"narration": "1-2 spoken sentences", "emphasis": ["1-2 key words copied exactly from the '
+              'narration, highlighted in the captions"], "visual_query": "2-4 English words to search '
               'stock footage", "image_prompt": "one detailed English sentence describing the picture"}')
 
 

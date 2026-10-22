@@ -1,0 +1,166 @@
+{
+  "_help": "Editing styles (CapCut-like, all made with ffmpeg - free, no licences). Pick per job with --edit NAME, per category with \"edit\" in categories.json; default: energetic for Shorts, cinematic for long videos. transitions: any ffmpeg xfade name (fade dissolve wipeleft slideup smoothleft circleopen radial zoomin pixelize hblur fadeblack coverleft revealright ...). motion: zoomin zoomout panleft panright panup pandown. grade: none cinematic warm cold vintage bw vivid. captions: clean box pop karaoke. sfx: whoosh on transitions. punch: quick zoom bump at every cut. progress: bar at the bottom (Shorts). grain: film grain strength (makes files bigger and encoding slower; 0 = off).",
+  "cinematic": {
+    "transitions": [
+      "fade",
+      "dissolve",
+      "smoothleft",
+      "smoothright",
+      "circleopen",
+      "fadeblack"
+    ],
+    "transition_seconds": 0.6,
+    "motion": [
+      "zoomin",
+      "zoomout",
+      "panleft",
+      "panright"
+    ],
+    "zoom": 0.12,
+    "grade": "cinematic",
+    "vignette": true,
+    "grain": 0,
+    "captions": "clean",
+    "sfx": false,
+    "punch": false,
+    "progress": false,
+    "music_volume": 0.12
+  },
+  "energetic": {
+    "transitions": [
+      "slideleft",
+      "slideup",
+      "wipeleft",
+      "zoomin",
+      "smoothup",
+      "coverleft",
+      "revealright",
+      "hblur"
+    ],
+    "transition_seconds": 0.3,
+    "motion": [
+      "zoomin",
+      "zoomin",
+      "panleft",
+      "panright",
+      "zoomout"
+    ],
+    "zoom": 0.18,
+    "grade": "vivid",
+    "vignette": false,
+    "grain": 0,
+    "captions": "pop",
+    "sfx": true,
+    "punch": true,
+    "progress": true,
+    "music_volume": 0.16
+  },
+  "calm": {
+    "transitions": [
+      "fade",
+      "dissolve",
+      "fadeslow"
+    ],
+    "transition_seconds": 1.0,
+    "motion": [
+      "zoomin",
+      "zoomout",
+      "panup"
+    ],
+    "zoom": 0.08,
+    "grade": "warm",
+    "vignette": true,
+    "grain": 0,
+    "captions": "clean",
+    "sfx": false,
+    "punch": false,
+    "progress": false,
+    "music_volume": 0.14
+  },
+  "news": {
+    "transitions": [
+      "wipeleft",
+      "slideleft",
+      "coverleft"
+    ],
+    "transition_seconds": 0.35,
+    "motion": [
+      "zoomin",
+      "panleft",
+      "panright"
+    ],
+    "zoom": 0.08,
+    "grade": "none",
+    "vignette": false,
+    "grain": 0,
+    "captions": "box",
+    "sfx": true,
+    "punch": false,
+    "progress": false,
+    "music_volume": 0.08
+  },
+  "dark": {
+    "transitions": [
+      "fadeblack",
+      "radial",
+      "hblur",
+      "dissolve"
+    ],
+    "transition_seconds": 0.8,
+    "motion": [
+      "zoomin",
+      "zoomin",
+      "panleft"
+    ],
+    "zoom": 0.1,
+    "grade": "cold",
+    "vignette": true,
+    "grain": 4,
+    "captions": "clean",
+    "sfx": true,
+    "punch": false,
+    "progress": false,
+    "music_volume": 0.14
+  },
+  "karaoke": {
+    "transitions": [
+      "fade",
+      "dissolve",
+      "fadeslow"
+    ],
+    "transition_seconds": 1.0,
+    "motion": [
+      "zoomin",
+      "zoomout",
+      "panup"
+    ],
+    "zoom": 0.08,
+    "grade": "warm",
+    "vignette": true,
+    "grain": 0,
+    "captions": "karaoke",
+    "sfx": false,
+    "punch": false,
+    "progress": false,
+    "music_volume": 0.0
+  },
+  "simple": {
+    "transitions": [
+      "fade"
+    ],
+    "transition_seconds": 0.0,
+    "motion": [
+      "panleft",
+      "panright"
+    ],
+    "zoom": 0.1,
+    "grade": "none",
+    "vignette": false,
+    "grain": 0,
+    "captions": "clean",
+    "sfx": false,
+    "punch": false,
+    "progress": false,
+    "music_volume": 0.12
+  }
+}

@@ -17,4 +17,5 @@ jobs:
       - run: python -m pyflakes pipeline scripts voice
       - run: python -m pipeline make --category 2d --lang hi --format short
       - run: python -m pipeline make --category drama --lang en --format long --minutes 2
+      - run: for e in simple news dark calm karaoke; do python -m pipeline make --category facts --format short --edit $e; done
       - run: docker build -t youtubeaiagent .

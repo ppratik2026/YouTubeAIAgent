@@ -131,9 +131,18 @@ def plain(dest, portrait, n):
     return out, "image"
 
 
+def test_pattern(dest, portrait, n):
+    """Offline tests: a busy picture, so zoom, pan and transitions are visible in the output."""
+    w, h = (1080, 1920) if portrait else (1920, 1080)
+    out = dest.with_suffix(".jpg")
+    run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", f"testsrc2=s={w}x{h}:r=1",
+         "-vf", f"hue=h={n * 47 % 360}", "-frames:v", "1", str(out)])
+    return out, "image"
+
+
 def for_scene(scene, cat, portrait, used, dest, n, seed, rewrite=None):
     if settings.VISUALS_OFFLINE:
-        return plain(dest, portrait, n)
+        return test_pattern(dest, portrait, n)
     query = scene.get("visual_query") or "abstract background"
     prompt = scene.get("image_prompt") or query
     style = style_text(cat.get("style"))

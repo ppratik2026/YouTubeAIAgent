@@ -10,7 +10,7 @@ category -> topic (Google News / YouTube trends / AI idea)
         -> 10 titles, linted by title.py, SEO      (yt-package + yt-seo skills)
         -> voice per scene                          (edge-tts free, or YOUR cloned voice)
         -> footage / photos / AI images            (Pexels, Pollinations, Cloudflare - all free)
-        -> video + subtitles + music + chapters    (ffmpeg)
+        -> edit: transitions, zoom, grade, captions (ffmpeg, CapCut-style)
         -> upload, within YouTube's daily quota    (YouTube Data API)
 ```
 
@@ -211,7 +211,28 @@ Music ka matlab yahan teen alag cheezein hain:
 - 1-1 ghante ke "mantra jaap loop" channels ko YouTube aksar "repetitive / reused content" maan kar monetize
   nahi karta. Apni recording + katha/arth wali videos mix karo.
 
-## 10. Server badalna
+## 10. Video editing (CapCut jaisa, ffmpeg se, free)
+
+CapCut ka koi API nahi hai aur uske effects/assets use karne ka license nahi milta - isliye wahi
+effects ffmpeg se khud banaye hain. Har video ek hi final encode mein banti hai (quality do baar nahi girti).
+
+| Effect | Kya hota hai |
+|---|---|
+| Transitions | 60+ ffmpeg transitions: fade, dissolve, slide, wipe, smooth, circle, radial, blur, zoom, cover/reveal... cut par timed |
+| Motion | Har picture par Ken Burns zoom-in / zoom-out / pan; Shorts mein cut par "punch zoom" |
+| Color grade | cinematic (teal-orange), warm, cold, vintage, b&w, vivid + vignette + film grain |
+| Captions | `clean`, `box` (news), `pop` (shabd pop hote hain - Shorts), `karaoke` (gaane ke saath shabd bharte hain); numbers aur key words amber rang mein |
+| Sound | Transition par whoosh, music voice ke neeche apne aap dabta hai (ducking), awaaz YouTube ke -14 LUFS par normalise |
+| Shorts | Neeche progress bar |
+
+Styles (`./yt edits`): `cinematic` `energetic` `calm` `news` `dark` `karaoke` `simple`.
+Default: Shorts = energetic, long = cinematic; news/crime/tech = news, horror = dark, devotional = calm,
+bhajan with lyrics = karaoke. Badalna ho to: `./yt add ... --edit dark`. Apna style `config/edits.json`
+mein copy karke banao. Apni whoosh sound: `assets/sfx/whoosh.wav`.
+
+Speed (4 vCPU): Short ~30-60 sec, 10 min ki video ~10-12 min (scenes saare cores par saath banti hain).
+
+## 11. Server badalna
 
 ```sh
 # purane server se
