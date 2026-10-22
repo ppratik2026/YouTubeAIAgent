@@ -5,10 +5,38 @@ services:
     restart: unless-stopped
     volumes:
       - ./data:/app/data
-      - ./assets/music:/app/assets/music
+      - ./assets:/app/assets
       - ./config:/app/config
 
-  # Your own cloned voice. Starts only with: docker compose --profile clone up -d
+  # Web dashboard. Only reachable from the server itself unless the https profile runs
+  # (the password must never travel over plain http on the internet).
+  dashboard:
+    build: .
+    command: ["python", "-m", "dashboard"]
+    env_file: .env
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./assets:/app/assets
+      - ./config:/app/config
+
+  # HTTPS in front of the dashboard, certificate from Let's Encrypt automatically.
+  # Needs DOMAIN in .env pointing at this server. Start with: sh install.sh https
+  caddy:
+    image: caddy:2.8.4
+    profiles: ["https"]
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
+
+  # Your own cloned voice. Start with: sh install.sh clone
   voice:
     build: ./voice
     profiles: ["clone"]

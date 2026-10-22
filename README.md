@@ -17,6 +17,18 @@ category -> topic (Google News / YouTube trends / AI idea)
 The rules and scoring tools come from the
 [youtube-agent-skill](https://github.com/Jakeschincariol/youtube-agent-skill) pack in `.claude/skills/`.
 
+## 0. Dashboard (phone se sab kuch)
+
+`.env` mein `DASHBOARD_PASSWORD` (8+ characters) daalo. Dashboard par:
+saare channels ek jagah · videos add karo (category, count, bhasha, awaaz, style, edit) · apni recording /
+bhajan upload karo · review wali videos dekho aur Approve / Reject · 3 thumbnails mein se chuno ·
+comment replies edit karke post karo · tyohar calendar · health problems · monetization progress · log.
+
+- **Phone se (HTTPS)**: free domain lo (jaise duckdns.org, server ka IP daalo), `.env` mein `DOMAIN=...`,
+  phir `sh install.sh https` -> `https://<DOMAIN>` (certificate apne aap).
+- **Sirf PC se**: `ssh -L 8080:localhost:8080 root@SERVER`, phir browser mein `http://localhost:8080`.
+- Bina HTTPS ke dashboard internet par khula nahi hota - password plain http par nahi jaana chahiye.
+
 ## 1. Server par install (Ubuntu / Debian, koi bhi VPS)
 
 ```sh
@@ -232,7 +244,23 @@ mein copy karke banao. Apni whoosh sound: `assets/sfx/whoosh.wav`.
 
 Speed (4 vCPU): Short ~30-60 sec, 10 min ki video ~10-12 min (scenes saare cores par saath banti hain).
 
-## 11. Server badalna
+## 11. Aur features
+
+| Feature | Kaise |
+|---|---|
+| **Branding** | `data/channels/<name>/branding/logo.png` (ya `data/branding/`) = watermark. Apna `intro.mp4` / `outro.mp4` bhi rakh sakte ho, warna naam + rang se card banta hai. `channel.json` -> `"branding": {"color": "#7B1E1E", "intro": false, "outro": true}`. Intro default off (hook se pehle intro = log chale jaate hain); long videos ke end mein 8 sec outro = end screen ki jagah |
+| **Thumbnails** | Har long video ke 3 thumbnail (AI background + video frames, 3 layouts), best apne aap. Baaki `thumb_1..3.jpg` - dashboard se badlo, ya Studio ke "Test & compare" mein daalo |
+| **Retention se seekhna** | 3 din + 50 views ke baad har video ka retention graph: pehle 30 sec mein kitne gaye, kis line par log chhod gaye. Ye lessons agli scripts mein jaate hain |
+| **Comment replies** | Har 6 ghante naye comments -> sawal / correction / tareef / bait; bait ka jawab nahi; baaki ke draft. `./yt comments`, `./yt reply <id>` ya dashboard. `COMMENTS_AUTO_REPLY=1` = sawal + tareef ke reply bina pooche |
+| **Tyohar calendar** | `config/calendar.json` - tareekh se kuch din pehle videos apne aap queue, sabse pehle banti aur upload hoti hain. `./yt events`. Apne events (match, result, launch) bhi daalo |
+| **Doosri bhasha** | `./yt --channel hindi add ... --also en:english` - wahi pictures, English script + awaaz, English channel par |
+| **Same characters** | AI-picture kahaniyon mein har character ka fixed look har image mein; poori video ek seed |
+| **Health** | `./yt health` / dashboard: disk, worker band, YouTube login, Gemini limit, failed uploads, review mein atki videos |
+
+`./yt progress` (analytics) aur comment replies ke liye `scripts/get_refresh_token.py` **ek baar dobara**
+chalao - ab wo analytics + comments ki permission bhi maangta hai.
+
+## 12. Server badalna
 
 ```sh
 # purane server se
