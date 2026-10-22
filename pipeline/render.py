@@ -16,7 +16,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from . import settings
+from . import branding, settings
 from .util import duration, log, run
 
 GAP = 0.35  # breath after each scene's line
@@ -83,11 +83,16 @@ def _look(style):
 def _scene_video(src, kind, dur, portrait, out, style, motion):
     w, h = size(portrait)
     fps = settings.FPS
+    enc = ["-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "16", "-pix_fmt", "yuv420p", "-r", str(fps)]
+    if kind == "raw":  # intro / outro: no motion, no grade, held on its last frame if too short
+        run(["ffmpeg", "-y", "-v", "error", "-i", str(src), "-vf",
+             f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},fps={fps},setsar=1,"
+             f"tpad=stop_mode=clone:stop_duration={dur:.3f}", "-t", f"{dur:.3f}", *enc, str(out)])
+        return "none"
     frames = max(1, round(dur * fps))
     zoom, x, y = _zoom_expr(motion, style["zoom"], frames, style["punch"])
     grade, post = _look(style)
     post = f",{post}" if post else ""
-    enc = ["-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "16", "-pix_fmt", "yuv420p", "-r", str(fps)]
     if kind == "video":
         # Footage already moves: cover the frame, a gentle zoom, and the punch at the cut.
         vz, _, _ = _zoom_expr("zoomin", style["zoom"] / 3, frames, style["punch"])
@@ -220,10 +225,22 @@ def render(scenes, language, portrait, mood, work, out_mp4, gap=GAP, music=True,
     rng = random.Random(str(out_mp4))
     w, h = size(portrait)
     T = float(st["transition_seconds"])
+    # Branding: intro / outro join the timeline as silent scenes, so transitions and music run through them.
+    head, tail = [], []
+    for clip, where in ((branding.intro(work, w, h, font_for(language)), head),
+                        (branding.outro(work, w, h, font_for(language), language, portrait), tail)):
+        if clip:
+            secs = duration(clip)
+            silent = work / f"silence-{len(head) + len(tail)}.wav"
+            run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+                 "-t", f"{secs:.3f}", str(silent)])
+            where.append({"narration": "", "audio": silent, "visual": clip, "kind": "raw", "brand": True})
+    content = scenes
+    scenes = head + scenes + tail
     segs, wavs, t = [], [], 0.0
     for n, sc in enumerate(scenes):
         sc["speech"] = duration(sc["audio"])
-        sc["dur"] = sc["speech"] + gap
+        sc["dur"] = sc["speech"] + (0 if sc.get("brand") else gap)
         sc["start"] = t
         t += sc["dur"]
     if T > 0:  # no transition can be longer than half the shortest scene
@@ -238,7 +255,7 @@ def render(scenes, language, portrait, mood, work, out_mp4, gap=GAP, music=True,
         log.info("scene %s/%s %.1fs %s", n + 1, len(scenes), sc["dur"], sc["motion"])
 
     for n, sc in enumerate(scenes):
-        sc["motion"] = rng.choice(st["motion"])
+        sc["motion"] = "none" if sc.get("brand") else rng.choice(st["motion"])
         wavs.append(work / f"a{n:03d}.wav")
         segs.append(work / f"v{n:03d}.mp4")
     # Scenes are independent: render them on all cores at once.
@@ -266,6 +283,11 @@ def render(scenes, language, portrait, mood, work, out_mp4, gap=GAP, music=True,
     if cuts:
         i_sfx = (i_music or i_voice) + 1
         cmd += ["-i", str(_whoosh(work))]
+    mark = branding.logo()
+    i_logo = None
+    if mark:
+        i_logo = (i_sfx or i_music or i_voice) + 1
+        cmd += ["-i", str(mark)]
 
     fc = []
     # video: transitions
@@ -281,6 +303,15 @@ def render(scenes, language, portrait, mood, work, out_mp4, gap=GAP, music=True,
         fc.append("".join(f"[{k}:v]" for k in range(len(segs))) + f"concat=n={len(segs)}:v=1:a=0[cat]")
         vlast = "cat"
     # (grade, vignette and grain are already in each scene)
+    if i_logo is not None:
+        # Watermark top corner, only over the content (not over the intro / outro cards).
+        a = content[0]["start"]
+        b = content[-1]["start"] + content[-1]["dur"]
+        opacity = branding.config()["watermark_opacity"]
+        fc.append(f"[{i_logo}:v]scale={w // 11}:-1,format=rgba,colorchannelmixer=aa={opacity}[logo]")
+        fc.append(f"[{vlast}][logo]overlay=W-w-{w // 36}:{h // 40 if not portrait else h // 14}:"
+                  f"enable='between(t,{a:.3f},{b:.3f})'[wm]")
+        vlast = "wm"
     if st["progress"]:
         fc.append(f"color=c=0xFFD700:s={w}x12:r={settings.FPS}[bar]")
         fc.append(f"[{vlast}][bar]overlay=x='-W+W*t/{total:.3f}':y=H-12:shortest=1[prog]")
