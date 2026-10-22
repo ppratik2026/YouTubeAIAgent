@@ -1,0 +1,6 @@
+.env
+data/
+__pycache__/
+*.pyc
+assets/music/*
+!assets/music/README.md

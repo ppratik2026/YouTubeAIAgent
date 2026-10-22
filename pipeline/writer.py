@@ -1,0 +1,190 @@
+"""Topic -> hooks -> script -> packaging, following the yt-script, yt-package and yt-seo skills."""
+import random
+
+from . import trends
+from .llm import ask_json
+from .skills import formulas_brief, lint_title, rules, score_hook
+from .util import log
+
+WPM = 150  # the yt-script skill's runtime estimate
+
+LANG = {
+    "hi": ("Hindi", "Write all spoken text in natural, everyday spoken Hindi in Devanagari script "
+                    "(common English words like 'phone', 'police', 'video' are fine). Not formal/shuddh Hindi."),
+    "en": ("English", "Write all spoken text in simple, clear English that an Indian audience follows easily."),
+}
+
+
+def _lang(language):
+    return LANG.get(language, LANG["en"])
+
+
+def _system(cat, language):
+    name, how = _lang(language)
+    return (
+        "You write YouTube videos that people finish. Follow these rules from the yt-script skill:\n\n"
+        f"{rules('yt-script')}\n\n"
+        f"CATEGORY: {cat['label']}. {cat['tone']}\n"
+        f"LANGUAGE: {name}. {how}\n"
+        "Image prompts and stock-footage search queries are ALWAYS in English.\n"
+        "Never invent a number, a statistic, a quote or a source. No hateful, sexual or graphic content. "
+        "No real living person may be shown as doing something they did not do.\n"
+        "Reply with JSON only."
+    )
+
+
+# ---------- 1. topic ----------
+
+def pick_topic(cat, language, video_format, used_titles):
+    used = {t.lower() for t in used_titles}
+    if cat.get("news"):
+        for story in trends.news_stories(cat.get("news_query", ""), language):
+            if story["title"].lower() in used:
+                continue
+            facts = trends.story_facts(story["title"], language) or [story]
+            return {"topic": story["title"], "angle": "", "facts": facts, "source_title": story["title"]}
+        raise RuntimeError("no new news story found (all recent ones already made)")
+
+    outliers = trends.youtube_outliers(cat["label"], language, video_format)
+    inspo = "\n".join(f"- {v['title']} ({v['multiple']}x, {v['formula']})" for v in outliers) or "(none)"
+    recent = "\n".join(f"- {t}" for t in list(used_titles)[-60:]) or "(none)"
+    prompt = (
+        f"Give ONE new {('YouTube Short' if video_format == 'short' else 'long YouTube video')} idea "
+        f"for the category '{cat['label']}'.\n\n"
+        f"What is working right now (ranked by how far each beat the others; learn the SHAPE, never copy "
+        f"the story):\n{inspo}\n\nAlready made on this channel - do not repeat these:\n{recent}\n\n"
+        'JSON: {"topic": "one line, in English", "angle": "why someone clicks, one line"}'
+    )
+    idea = ask_json(prompt, _system(cat, language), offline=lambda: {
+        "topic": f"Test story {random.randint(1000, 9999)} for {cat['label']}", "angle": "test"})
+    idea["facts"] = []
+    return idea
+
+
+def _facts_block(topic):
+    if not topic["facts"]:
+        return ""
+    lines = "\n".join(f"- [{f['source']}] {f['title']}. {f['summary']}" for f in topic["facts"])
+    return f"\n\nFACTS (use ONLY these; if something is not here, do not say it):\n{lines}\n"
+
+
+# ---------- 2. hooks ----------
+
+def best_hook(cat, language, video_format, topic):
+    prompt = (
+        f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n"
+        f"Write FIVE different opening hooks (the first {'3' if video_format == 'short' else '15'} seconds), "
+        f"each on a different formula from this list:\n{formulas_brief()}\n\n"
+        'JSON: {"hooks": [{"text": "the hook in the video language", '
+        '"english": "the same hook in English", "formula": "formula name"}]}'
+    )
+    out = ask_json(prompt, _system(cat, language), offline=lambda: {"hooks": [
+        {"text": "क्या आप जानते हैं ये बात?" if language == "hi" else "You have been doing this wrong.",
+         "english": "You have been doing this wrong for 10 years, and it costs you.", "formula": "The Mistake"},
+        {"text": "Test hook two", "english": "Here is the one thing nobody tells you.", "formula": "The Insider"},
+    ]})
+    hooks = out.get("hooks") or []
+    if not hooks:
+        raise RuntimeError("model returned no hooks")
+    # hookscore.py is built on English patterns, so the English version is what gets scored.
+    for h in hooks:
+        h["score"] = score_hook(h.get("english") or h["text"])
+    hooks.sort(key=lambda h: -h["score"]["verdict"])
+    log.info("hook: %s (%s, %s)", hooks[0]["english"], hooks[0]["score"]["verdict"], hooks[0]["score"]["formula"])
+    return hooks
+
+
+# ---------- 3. script ----------
+
+SCENE_JSON = ('{"narration": "1-2 spoken sentences", "visual_query": "2-4 English words to search '
+              'stock footage", "image_prompt": "one detailed English sentence describing the picture"}')
+
+
+def _offline_scenes(n, language):
+    line = ("यह एक टेस्ट वाक्य है जो वीडियो की आवाज़ और सबटाइटल जाँचने के लिए है।" if language == "hi"
+            else "This is a test sentence to check the voice and the subtitles of the video.")
+    return [{"narration": line, "visual_query": "city night", "image_prompt": "a city at night"} for _ in range(n)]
+
+
+def write_short(cat, language, topic, hook):
+    words = 130
+    prompt = (
+        f"Write a YouTube SHORT (vertical, about {words} spoken words, 40-55 seconds).\n"
+        f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n"
+        f"Start with exactly this hook: {hook['text']}\n"
+        "6-9 scenes. The last line must loop back into the first line. No 'subscribe' talk.\n"
+        f'JSON: {{"sections": [{{"heading": "Short", "scenes": [{SCENE_JSON}]}}]}}'
+    )
+    return ask_json(prompt, _system(cat, language),
+                    offline=lambda: {"sections": [{"heading": "Short", "scenes": _offline_scenes(6, language)}]})
+
+
+def write_long(cat, language, topic, hook, minutes):
+    words = int(minutes * WPM)
+    n_sections = max(3, min(10, round(minutes / 1.5)))
+    outline = ask_json(
+        f"Plan a {minutes}-minute YouTube video (~{words} spoken words) in {n_sections} sections.\n"
+        f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n"
+        f"The hook is: {hook['text']}\n"
+        "Section 1 is the hook + the turn (say what the video will do, no channel intro). The last section "
+        "is the payoff + ONE ask. Every section has one idea.\n"
+        'JSON: {"sections": [{"heading": "3-5 word chapter title in the video language", '
+        '"beats": "what happens in this section, 2-3 lines, English", "words": 0}]}',
+        _system(cat, language),
+        offline=lambda: {"sections": [{"heading": f"भाग {i + 1}" if language == "hi" else f"Part {i + 1}",
+                                       "beats": "test", "words": words // n_sections} for i in range(n_sections)]},
+        temperature=0.7)
+    sections, story_so_far = [], []
+    for i, sec in enumerate(outline["sections"]):
+        target = int(sec.get("words") or words // len(outline["sections"]))
+        first = f"Start with exactly this hook: {hook['text']}\n" if i == 0 else ""
+        out = ask_json(
+            f"Write section {i + 1} of {len(outline['sections'])} of a YouTube video.\n"
+            f"Topic: {topic['topic']}{_facts_block(topic)}\n"
+            f"Whole plan: {[s['heading'] for s in outline['sections']]}\n"
+            f"This section: {sec['heading']} - {sec['beats']}\n"
+            f"Already said (do not repeat): {' '.join(story_so_far)[-1500:]}\n{first}"
+            f"About {target} spoken words, split into scenes of 1-2 sentences.\n"
+            f'JSON: {{"scenes": [{SCENE_JSON}]}}',
+            _system(cat, language),
+            offline=lambda: {"scenes": _offline_scenes(4, language)},
+            temperature=0.8)
+        scenes = [s for s in out.get("scenes", []) if s.get("narration", "").strip()]
+        sections.append({"heading": sec["heading"], "scenes": scenes})
+        story_so_far += [s["narration"] for s in scenes]
+    return {"sections": sections}
+
+
+# ---------- 4. packaging ----------
+
+def package(cat, language, video_format, topic, script):
+    full = " ".join(s["narration"] for sec in script["sections"] for s in sec["scenes"])
+    prompt = (
+        f"{rules('yt-package')}\n\n{rules('yt-seo')}\n\n"
+        f"The video ({'YouTube Short' if video_format == 'short' else 'long video'}): {full[:3000]}\n\n"
+        "Write TEN title options (each with its own thumbnail text, max 3 words, different words from the "
+        "title), in the video language. Then the description: the first two lines say what the viewer gets "
+        "in the words they would search; then 3-5 short lines more. Then up to 12 tags (spellings, names, "
+        "the words people type). Then the 3 search queries this should win.\n"
+        'JSON: {"titles": [{"title": "...", "thumb": "..."}], "description": "...", "tags": ["..."], '
+        '"queries": ["..."]}'
+    )
+    out = ask_json(prompt, _system(cat, language), temperature=0.8, offline=lambda: {
+        "titles": [{"title": f"{topic['topic'][:50]} - 3 things nobody told you", "thumb": "NOBODY SAW"},
+                   {"title": "Amazing incredible test video title", "thumb": "test video"}],
+        "description": "Test description line one.\nLine two.", "tags": ["test"], "queries": ["test"]})
+    ranked = []
+    for t in out.get("titles", []):
+        title = t["title"].strip()[:100]
+        if video_format == "short" and "#shorts" not in title.lower():
+            title = (title[:91] + " #Shorts") if len(title) > 91 else title + " #Shorts"
+        r = lint_title(title, t.get("thumb"))
+        ranked.append({"title": title, "thumb": t.get("thumb", ""), "score": r["score"],
+                       "issues": [m for _, m in r["issues"]]})
+    if not ranked:
+        raise RuntimeError("model returned no titles")
+    ranked.sort(key=lambda r: -r["score"])
+    log.info("title: %s (%s)", ranked[0]["title"], ranked[0]["score"])
+    tags = [t.strip()[:30] for t in out.get("tags", []) if t.strip()][:12]
+    return {"title": ranked[0]["title"], "thumb_text": ranked[0]["thumb"], "title_options": ranked[:3],
+            "description": out.get("description", "").strip(), "tags": tags, "queries": out.get("queries", [])}

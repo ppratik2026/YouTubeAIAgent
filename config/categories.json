@@ -1,0 +1,108 @@
+{
+  "_help": "Add your own category by copying any block. visuals: stock = real footage from Pexels, ai = AI images from Pollinations in ai_style. news: true = facts come from today's news (Google News RSS) and the script may only use those facts. youtube_category: YouTube's category id. mood picks voice pace and assets/music/<mood>/.",
+  "news": {
+    "label": "News",
+    "visuals": "stock",
+    "news": true,
+    "news_query": "",
+    "mood": "neutral",
+    "youtube_category": "25",
+    "tone": "A clear, neutral news explainer. Only facts from the sources given. Say who reported what. No opinions, no speculation."
+  },
+  "crime": {
+    "label": "Crime",
+    "visuals": "stock",
+    "news": true,
+    "news_query": "crime case police investigation",
+    "mood": "tense",
+    "youtube_category": "25",
+    "tone": "A calm, serious true-crime explainer of a publicly reported case. Only facts from the sources given. Use 'accused' / 'police say' wording. Never name victims who are minors, never show or describe gore, never claim guilt that a court has not decided."
+  },
+  "drama": {
+    "label": "Drama story",
+    "visuals": "ai",
+    "ai_style": "cinematic film still, dramatic lighting, realistic Indian characters, shallow depth of field",
+    "news": false,
+    "mood": "emotional",
+    "youtube_category": "24",
+    "tone": "An original fictional family/relationship drama with a twist, told by a narrator. Clearly fiction. Emotional, simple language."
+  },
+  "music": {
+    "label": "Music stories",
+    "visuals": "stock",
+    "news": false,
+    "mood": "uplifting",
+    "youtube_category": "10",
+    "tone": "Stories and facts about songs, singers, ragas and music history. Do not quote song lyrics (copyright). Do not play any copyrighted song."
+  },
+  "animation": {
+    "label": "Animated story",
+    "visuals": "ai",
+    "ai_style": "colourful animated movie style, expressive cartoon characters, soft lighting",
+    "news": false,
+    "mood": "playful",
+    "youtube_category": "1",
+    "tone": "An original animated story with a clear moral, fun for all ages."
+  },
+  "2d": {
+    "label": "2D cartoon story",
+    "visuals": "ai",
+    "ai_style": "flat 2D cartoon illustration, bold outlines, bright flat colours, children's book style",
+    "news": false,
+    "mood": "playful",
+    "youtube_category": "1",
+    "tone": "An original 2D cartoon story for kids and families, simple words, a moral at the end."
+  },
+  "3d": {
+    "label": "3D cartoon story",
+    "visuals": "ai",
+    "ai_style": "3D animated movie render, Pixar-like stylised characters, soft global illumination, high detail",
+    "news": false,
+    "mood": "playful",
+    "youtube_category": "1",
+    "tone": "An original 3D-animation style story with lovable characters and a twist."
+  },
+  "horror": {
+    "label": "Horror story",
+    "visuals": "ai",
+    "ai_style": "dark atmospheric horror film still, fog, moonlight, eerie but not gory",
+    "news": false,
+    "mood": "tense",
+    "youtube_category": "24",
+    "tone": "An original spooky story, suspense over gore. Clearly fiction."
+  },
+  "facts": {
+    "label": "Facts / explainer",
+    "visuals": "stock",
+    "news": false,
+    "mood": "neutral",
+    "youtube_category": "27",
+    "tone": "A surprising, well-known-to-be-true facts explainer. Never invent numbers; if unsure, say it without a number."
+  },
+  "motivational": {
+    "label": "Motivational",
+    "visuals": "stock",
+    "news": false,
+    "mood": "uplifting",
+    "youtube_category": "22",
+    "tone": "A motivational talk with one practical idea and a real-life style example. No fake quotes attributed to real people."
+  },
+  "mythology": {
+    "label": "Mythology",
+    "visuals": "ai",
+    "ai_style": "epic Indian mythology painting, divine light, rich colours, detailed",
+    "news": false,
+    "mood": "emotional",
+    "youtube_category": "27",
+    "tone": "A respectful retelling of a well-known Indian mythology story, as told in common tradition."
+  },
+  "tech": {
+    "label": "Tech",
+    "visuals": "stock",
+    "news": true,
+    "news_query": "technology AI smartphone launch",
+    "mood": "neutral",
+    "youtube_category": "28",
+    "tone": "A clear tech news explainer for normal people. Only facts from the sources given."
+  }
+}

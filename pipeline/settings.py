@@ -1,0 +1,86 @@
+"""All configuration comes from environment variables (or a .env file next to the repo root).
+
+Everything the app writes lives under DATA_DIR, so moving to another server is: copy .env and the
+data folder, then start the container again.
+"""
+import json
+import os
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_dotenv(path):
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k, v = k.strip(), v.strip().strip('"').strip("'")
+        os.environ.setdefault(k, v)
+
+
+_load_dotenv(ROOT / ".env")
+
+
+def env(name, default=""):
+    return os.environ.get(name, default).strip()
+
+
+def env_int(name, default):
+    try:
+        return int(env(name, str(default)))
+    except ValueError:
+        return default
+
+
+DATA_DIR = Path(env("DATA_DIR", str(ROOT / "data"))).resolve()
+VIDEOS_DIR = DATA_DIR / "videos"
+WORK_DIR = DATA_DIR / "work"
+LOG_DIR = DATA_DIR / "logs"
+for d in (DATA_DIR, VIDEOS_DIR, WORK_DIR, LOG_DIR):
+    d.mkdir(parents=True, exist_ok=True)
+
+SKILLS_DIR = ROOT / ".claude" / "skills"
+MUSIC_DIR = Path(env("MUSIC_DIR", str(ROOT / "assets" / "music")))
+
+# Script writing. "gemini" (free key from aistudio.google.com) or "offline" for tests.
+LLM_PROVIDER = env("LLM_PROVIDER", "gemini")
+GEMINI_API_KEY = env("GEMINI_API_KEY")
+GEMINI_MODEL = env("GEMINI_MODEL", "gemini-flash-latest")
+
+# Visuals. Free key from pexels.com/api. AI images come from Pollinations (no key).
+PEXELS_API_KEY = env("PEXELS_API_KEY")
+POLLINATIONS_TOKEN = env("POLLINATIONS_TOKEN")
+VISUALS_OFFLINE = env("VISUALS_OFFLINE") == "1"
+
+# Voice. "edge" (free Microsoft neural voices, Hindi + English) or "offline" for tests.
+TTS_PROVIDER = env("TTS_PROVIDER", "edge")
+
+# Trend research (optional). A YouTube Data API *key* from a separate Google Cloud project, so
+# searches do not eat the upload quota.
+YOUTUBE_API_KEY = env("YOUTUBE_API_KEY")
+REGION = env("REGION", "IN")
+
+# Upload. OAuth client + refresh token from scripts/get_refresh_token.py.
+YT_CLIENT_ID = env("YT_CLIENT_ID")
+YT_CLIENT_SECRET = env("YT_CLIENT_SECRET")
+YT_REFRESH_TOKEN = env("YT_REFRESH_TOKEN")
+UPLOAD_PRIVACY = env("UPLOAD_PRIVACY", "private")          # private | unlisted | public
+UPLOADS_PER_DAY = env_int("UPLOADS_PER_DAY", 6)            # default YouTube quota fits ~6
+PUBLISH_GAP_HOURS = env_int("PUBLISH_GAP_HOURS", 0)        # >0: schedule public at this spacing
+AUTO_UPLOAD = env("AUTO_UPLOAD", "1") == "1"
+KEEP_UPLOADED_DAYS = env_int("KEEP_UPLOADED_DAYS", 7)
+
+# Rendering
+VIDEO_CRF = env_int("VIDEO_CRF", 21)
+X264_PRESET = env("X264_PRESET", "veryfast")
+FPS = env_int("FPS", 30)
+CHANNEL_FOOTER = env("CHANNEL_FOOTER")
+WORKER_SLEEP_SECONDS = env_int("WORKER_SLEEP_SECONDS", 300)
+
+
+def load_categories():
+    return json.loads((ROOT / "config" / "categories.json").read_text(encoding="utf-8"))

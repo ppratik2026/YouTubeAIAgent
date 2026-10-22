@@ -1,0 +1,8 @@
+#!/bin/sh
+# Shortcut for the pipeline inside the running container:
+#   ./yt add --category crime --lang hi --format long --count 100
+#   ./yt list
+#   ./yt logs
+cd "$(dirname "$0")"
+if [ "$1" = "logs" ]; then exec docker compose logs -f --tail 100 worker; fi
+exec docker compose exec worker python -m pipeline "$@"

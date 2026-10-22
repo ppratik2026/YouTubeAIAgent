@@ -1,0 +1,9 @@
+services:
+  worker:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./assets/music:/app/assets/music
+      - ./config:/app/config
