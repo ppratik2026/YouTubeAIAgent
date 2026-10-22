@@ -129,7 +129,10 @@ def make_video(job):
         if p and (settings.VIDEOS_DIR / p["dir"] / "script.txt").exists():
             parent = (settings.VIDEOS_DIR / p["dir"] / "script.txt").read_text(encoding="utf-8")
             topic = {"topic": p["topic"], "angle": "one moment from the full video", "facts": []}
-    if not parent:
+    if not parent and job.get("topic"):  # a set topic, e.g. from the festival calendar
+        topic = {"topic": job["topic"], "angle": job.get("event", ""), "facts": []}
+        parent = None
+    elif not parent:
         insights.refresh_stats()
         topic = writer.pick_topic(cat, lang, fmt, state.used_titles(job["category"]),
                                   insights.performance_block(job["category"], fmt))
@@ -150,7 +153,8 @@ def make_video(job):
         sc["audio"] = tts.speak(sc["narration"], work / f"s{n:03d}", lang, gender, cat["mood"], engine)
     _pictures(scenes, cat, portrait, work)
     entry = _finish(job, cat, vid_id, work, script, meta, topic, render.GAP, hook, extra={
-        "formula": hook["score"]["formula"], "structure": structure, "parent": job.get("from_video")})
+        "formula": hook["score"]["formula"], "structure": structure, "parent": job.get("from_video"),
+        "event": job.get("event")})
 
     shorts = int(settings.load_channel().get("shorts_per_long", 0))
     if fmt == "long" and shorts > 0 and job["id"] != "manual":
@@ -245,7 +249,9 @@ def upload_ready(max_uploads=None):
     done = 0
     hist = state.history()
     by_id = {e["id"]: e for e in hist}
-    for e in [e for e in hist if e["status"] == "ready"]:
+    ready = [e for e in hist if e["status"] == "ready"]
+    ready.sort(key=lambda e: 0 if e.get("event") else 1)  # festival videos go out first
+    for e in ready:
         if state.uploads_left() <= 0 or (max_uploads is not None and done >= max_uploads):
             break
         parent = by_id.get(e.get("parent") or "")

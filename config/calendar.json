@@ -1,0 +1,27 @@
+{
+  "_help": "Videos queued automatically lead_days before each event. channels: list of channel names, or [\"*\"] for every channel (single-channel mode counts as \"*\"). topic: what the video is about (the script still follows the category's rules). Dates were checked against public holiday / festival calendars in Oct 2026; some regions differ by a day - check your panchang. Add your own events (cricket matches, exam results, launches...) the same way.",
+  "events": [
+    {"name": "Diwali 2026", "date": "2026-11-08", "channels": ["*"], "category": "devotional", "format": "long", "count": 1, "lead_days": 6,
+     "topic": "Diwali: the story of Lord Rama's return and why we light diyas, and the meaning of Lakshmi puja"},
+    {"name": "Diwali 2026 Shorts", "date": "2026-11-08", "channels": ["*"], "category": "devotional", "format": "short", "count": 2, "lead_days": 4,
+     "topic": "One lesser-known Diwali tradition and what it means"},
+    {"name": "Chhath Puja 2026", "date": "2026-11-15", "channels": ["*"], "category": "devotional", "format": "short", "count": 1, "lead_days": 4,
+     "topic": "Chhath Puja: why the setting and rising sun are worshipped"},
+    {"name": "Dev Deepawali / Guru Nanak Jayanti 2026", "date": "2026-11-24", "channels": ["*"], "category": "devotional", "format": "short", "count": 1, "lead_days": 4,
+     "topic": "Kartik Purnima: Dev Deepawali in Varanasi and Guru Nanak Jayanti on the same day"},
+    {"name": "Makar Sankranti 2027", "date": "2027-01-14", "channels": ["*"], "category": "devotional", "format": "short", "count": 2, "lead_days": 5,
+     "topic": "Makar Sankranti: the sun's journey north, kites and til-gud"},
+    {"name": "Maha Shivaratri 2027", "date": "2027-03-06", "channels": ["*"], "category": "devotional", "format": "long", "count": 1, "lead_days": 7,
+     "topic": "Maha Shivaratri: the stories behind the night of Shiva and how the fast is kept"},
+    {"name": "Holi 2027", "date": "2027-03-22", "channels": ["*"], "category": "devotional", "format": "short", "count": 2, "lead_days": 5,
+     "topic": "Holi: the story of Prahlad and Holika"},
+    {"name": "Chaitra Navratri 2027", "date": "2027-04-07", "channels": ["*"], "category": "devotional", "format": "long", "count": 1, "lead_days": 6,
+     "topic": "Chaitra Navratri: the nine forms of Durga, one by one"},
+    {"name": "Ram Navami 2027", "date": "2027-04-15", "channels": ["*"], "category": "devotional", "format": "short", "count": 1, "lead_days": 4,
+     "topic": "Ram Navami: what Lord Rama's life teaches about duty"},
+    {"name": "Sharad Navratri 2027", "date": "2027-09-30", "channels": ["*"], "category": "devotional", "format": "long", "count": 1, "lead_days": 6,
+     "topic": "Sharad Navratri: the story of Mahishasura and the nine nights"},
+    {"name": "Diwali 2027", "date": "2027-10-29", "channels": ["*"], "category": "devotional", "format": "long", "count": 1, "lead_days": 6,
+     "topic": "Diwali: the five days, from Dhanteras to Bhai Dooj"}
+  ]
+}

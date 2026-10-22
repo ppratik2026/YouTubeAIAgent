@@ -44,10 +44,10 @@ def jobs():
 
 
 def next_job():
-    for j in jobs():
-        if j["status"] == "active" and j["made"] < j["count"]:
-            return j
-    return None
+    """Dated jobs (festivals) first - they are useless after the date - then in the order added."""
+    active = [j for j in jobs() if j["status"] == "active" and j["made"] < j["count"]]
+    active.sort(key=lambda j: 0 if j.get("event") else 1)
+    return active[0] if active else None
 
 
 def update_job(job_id, **changes):

@@ -14,6 +14,7 @@
   approve <video_id> | reject <video_id>
   progress                  subscribers / watch hours / Shorts views vs monetization
   comments [--fetch]        drafted replies waiting for you
+  events                    festivals / dates coming up (config/calendar.json)
   reply <comment_id> [--text "..."] | reply-skip <comment_id>
   worker                    run forever: make queued videos, upload, sleep (all channels, in turn)
   channels                  list channels;   channel-add NAME   make a new one
@@ -35,7 +36,7 @@ if "--channel" in sys.argv[1:-1]:
     os.environ["CHANNEL"] = sys.argv[_i + 1]
     del sys.argv[_i:_i + 2]
 
-from . import comments, insights, llm, maker, settings, state, tts  # noqa: E402
+from . import comments, events, insights, llm, maker, settings, state, tts  # noqa: E402
 from .util import log, setup_logging  # noqa: E402
 
 IDLE, DAILY_LIMIT = 3, 4  # tick exit codes
@@ -155,6 +156,7 @@ def cmd_set_status(status):
 def tick(max_uploads=None):
     """One step for the current channel: upload what is due, then make one queued video."""
     try:
+        events.queue_due()
         maker.upload_ready(max_uploads)
         maker.cleanup()
         insights.refresh_stats()
@@ -277,6 +279,9 @@ def main(argv=None):
         p.add_argument("video_id")
         p.set_defaults(fn=cmd_set_status(status))
     sub.add_parser("progress").set_defaults(fn=lambda a: print(insights.progress()))
+    sub.add_parser("events").set_defaults(fn=lambda a: [
+        print(f"{e['date']}  {e['name']:<40} {e['format']:<5} x{e.get('count', 1)}  queued {e.get('lead_days', 5)} days before")
+        for e in events.upcoming(120)])
     p = sub.add_parser("comments")
     p.add_argument("--fetch", action="store_true")
     p.set_defaults(fn=cmd_comments)
