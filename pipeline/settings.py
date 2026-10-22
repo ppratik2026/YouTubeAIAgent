@@ -100,3 +100,8 @@ WORKER_SLEEP_SECONDS = env_int("WORKER_SLEEP_SECONDS", 300)
 
 def load_categories():
     return json.loads((ROOT / "config" / "categories.json").read_text(encoding="utf-8"))
+
+
+def load_channel():
+    p = ROOT / "config" / "channel.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}

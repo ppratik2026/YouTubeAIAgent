@@ -8,6 +8,9 @@
   cancel  <job_id>
   make    (same options as add, makes ONE video now, no queue)  [--upload]
   upload                    upload finished videos now (within today's quota)
+  review                    videos held back by the quality gate, and why
+  approve <video_id> | reject <video_id>
+  progress                  subscribers / watch hours / Shorts views vs monetization
   worker                    run forever: make queued videos, upload, sleep
   categories | styles | voices
 """
@@ -19,7 +22,7 @@ import time
 import traceback
 from pathlib import Path
 
-from . import llm, maker, settings, state, tts
+from . import insights, llm, maker, settings, state, tts
 from .util import log, setup_logging
 
 
@@ -66,7 +69,8 @@ def cmd_list(_):
         print(f"{j['id']}  {j['status']:<9} {what:<14} {j['language']} {j['format']:<5} "
               f"made {j['made']}/{j['count']}  uploaded {up}  failed {j['failed']}")
     ready = sum(1 for e in hist if e["status"] == "ready")
-    print(f"\nwaiting to upload: {ready}   uploads left today: {state.uploads_left()}   "
+    review = sum(1 for e in hist if e["status"] == "review")
+    print(f"\nwaiting to upload: {ready}   held for review: {review}   uploads left today: {state.uploads_left()}   "
           f"Gemini calls today: {llm.calls_today()}")
 
 
@@ -90,12 +94,31 @@ def cmd_voices(_):
     print("voice service:", "ready" if engine == "clone" else "not running or no male sample")
 
 
+def cmd_review(_):
+    held = [e for e in state.history() if e["status"] == "review"]
+    for e in held:
+        meta = json.loads((settings.VIDEOS_DIR / e["dir"] / "meta.json").read_text(encoding="utf-8"))
+        print(f"{e['id']}  quality {e.get('quality')}  {e['title']}")
+        print(f"          {'; '.join(meta.get('quality_notes') or []) or '-'}"
+              + (f"  (looks like: {meta['similar_to']})" if meta.get("similar_to") else ""))
+        print(f"          data/videos/{e['dir']}/video.mp4")
+    print(f"\n{len(held)} waiting. ./yt approve <id> uploads it, ./yt reject <id> drops it.")
+
+
+def cmd_set_status(status):
+    def go(a):
+        state.update_history(a.video_id, status=status)
+        print(a.video_id, "->", status)
+    return go
+
+
 def worker(_):
     log.info("worker started (data: %s)", settings.DATA_DIR)
     while True:
         try:
             maker.upload_ready()
             maker.cleanup()
+            insights.refresh_stats()
             job = state.next_job()
             if job:
                 try:
@@ -143,6 +166,12 @@ def main(argv=None):
     p.set_defaults(fn=cmd_make)
     sub.add_parser("upload").set_defaults(fn=lambda a: print("uploaded", maker.upload_ready()))
     sub.add_parser("worker").set_defaults(fn=worker)
+    sub.add_parser("review").set_defaults(fn=cmd_review)
+    for name, status in (("approve", "ready"), ("reject", "rejected")):
+        p = sub.add_parser(name)
+        p.add_argument("video_id")
+        p.set_defaults(fn=cmd_set_status(status))
+    sub.add_parser("progress").set_defaults(fn=lambda a: print(insights.progress()))
     sub.add_parser("voices").set_defaults(fn=cmd_voices)
     sub.add_parser("categories").set_defaults(fn=lambda a: _print_json_keys(settings.ROOT / "config/categories.json"))
     sub.add_parser("styles").set_defaults(fn=lambda a: _print_json_keys(settings.ROOT / "config/styles.json"))

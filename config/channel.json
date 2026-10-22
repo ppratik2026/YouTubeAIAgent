@@ -1,0 +1,21 @@
+{
+  "_help": "Your channel's identity. YouTube approves channels that look like one creator with one point of view, not a content farm - so fill this in and keep it stable. Every script uses it.",
+  "name": "My Channel",
+  "niche": "Explaining true stories and today's news in simple Hindi",
+  "audience": "Indian viewers aged 18-35 who want the full story in a few minutes",
+  "host": {
+    "name": "Pratik",
+    "personality": "calm, curious, honest; explains like a friend; gives his own view clearly marked as opinion",
+    "signature_open": "",
+    "signature_close": ""
+  },
+  "point_of_view": "Every video must add something a viewer cannot get from reading the headline: why it matters, what most people miss, and one clear takeaway.",
+  "avoid": [
+    "clickbait that the video does not pay off",
+    "medical, legal or money advice presented as expert advice",
+    "copying another channel's script or story"
+  ],
+  "publish_times_ist": ["18:30", "20:30"],
+  "shorts_per_long": 2,
+  "quality_min": 55
+}

@@ -14,7 +14,8 @@ import urllib.parse
 import urllib.request
 import webbrowser
 
-SCOPES = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube"
+SCOPES = ("https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube "
+          "https://www.googleapis.com/auth/yt-analytics.readonly")
 
 
 def main():

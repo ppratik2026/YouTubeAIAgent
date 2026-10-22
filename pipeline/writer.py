@@ -1,7 +1,7 @@
 """Topic -> hooks -> script -> packaging, following the yt-script, yt-package and yt-seo skills."""
 import random
 
-from . import trends
+from . import settings, trends
 from .llm import ask_json
 from .skills import formulas_brief, lint_title, rules, score_hook
 from .util import log
@@ -19,13 +19,50 @@ def _lang(language):
     return LANG.get(language, LANG["en"])
 
 
+# Different video shapes, rotated so the channel never looks templated (YouTube's "inauthentic /
+# mass-produced content" rule is about exactly that).
+STRUCTURES = [
+    "story arc: set-up, rising tension, twist, resolution, the lesson",
+    "countdown: a numbered list, best saved for last, each item with a concrete example",
+    "myth vs reality: what people believe, then what is actually true, point by point",
+    "case file: timeline of what happened, the key moment, what we still do not know",
+    "question-led: the viewer's real question, three wrong answers people give, the right one",
+    "explainer: the one idea, a simple analogy, a real example, what it means for the viewer",
+    "before / after: how it was, what changed, why, what comes next",
+]
+
+
+def _channel_block():
+    ch = settings.load_channel()
+    if not ch:
+        return ""
+    host = ch.get("host", {})
+    lines = [f"CHANNEL: {ch.get('name', '')} - {ch.get('niche', '')}. Audience: {ch.get('audience', '')}."]
+    if host.get("name"):
+        lines.append(f"HOST: the narrator is {host['name']}, {host.get('personality', '')}. Speak in first "
+                     "person as this host; the same person in every video.")
+    if ch.get("point_of_view"):
+        lines.append(f"VALUE: {ch['point_of_view']}")
+    if ch.get("avoid"):
+        lines.append("AVOID: " + "; ".join(ch["avoid"]))
+    if host.get("signature_open"):
+        lines.append(f"The host's usual opening line (after the hook): {host['signature_open']}")
+    if host.get("signature_close"):
+        lines.append(f"The host's usual sign-off: {host['signature_close']}")
+    return "\n".join(lines) + "\n"
+
+
 def _system(cat, language):
     name, how = _lang(language)
     return (
         "You write YouTube videos that people finish. Follow these rules from the yt-script skill:\n\n"
         f"{rules('yt-script')}\n\n"
+        f"{_channel_block()}"
         f"CATEGORY: {cat['label']}. {cat['tone']}\n"
         f"LANGUAGE: {name}. {how}\n"
+        "ORIGINALITY: write it fresh for this channel. Add the host's own explanation, an example or "
+        "comparison, and a takeaway - never just read out a summary. Vary sentence rhythm; no stock "
+        "filler phrases.\n"
         "Image prompts and stock-footage search queries are ALWAYS in English.\n"
         "Never invent a number, a statistic, a quote or a source. No hateful, sexual or graphic content. "
         "No real living person may be shown as doing something they did not do.\n"
@@ -33,9 +70,15 @@ def _system(cat, language):
     )
 
 
+def pick_structure(recent):
+    """A structure not used in the last few videos of this category."""
+    fresh = [s for s in STRUCTURES if s not in recent[-3:]] or STRUCTURES
+    return random.choice(fresh)
+
+
 # ---------- 1. topic ----------
 
-def pick_topic(cat, language, video_format, used_titles):
+def pick_topic(cat, language, video_format, used_titles, performance=None):
     used = {t.lower() for t in used_titles}
     if cat.get("news"):
         for story in trends.news_stories(cat.get("news_query", ""), language):
@@ -53,6 +96,7 @@ def pick_topic(cat, language, video_format, used_titles):
         f"for the category '{cat['label']}'.\n\n"
         f"What is working right now (ranked by how far each beat the others; learn the SHAPE, never copy "
         f"the story):\n{inspo}\n\nAlready made on this channel - do not repeat these:\n{recent}\n\n"
+        f"{performance or ''}"
         'JSON: {"topic": "one line, in English", "angle": "why someone clicks, one line"}'
     )
     idea = ask_json(prompt, _system(cat, language), offline=lambda: {
@@ -70,11 +114,13 @@ def _facts_block(topic):
 
 # ---------- 2. hooks ----------
 
-def best_hook(cat, language, video_format, topic):
+def best_hook(cat, language, video_format, topic, recent_formulas=()):
+    avoid = ", ".join(sorted(set(recent_formulas))) or "none"
     prompt = (
         f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n"
         f"Write FIVE different opening hooks (the first {'3' if video_format == 'short' else '15'} seconds), "
-        f"each on a different formula from this list:\n{formulas_brief()}\n\n"
+        f"each on a different formula from this list:\n{formulas_brief()}\n"
+        f"Used in the last videos, so prefer others: {avoid}\n\n"
         'JSON: {"hooks": [{"text": "the hook in the video language", '
         '"english": "the same hook in English", "formula": "formula name"}]}'
     )
@@ -89,7 +135,9 @@ def best_hook(cat, language, video_format, topic):
     # hookscore.py is built on English patterns, so the English version is what gets scored.
     for h in hooks:
         h["score"] = score_hook(h.get("english") or h["text"])
-    hooks.sort(key=lambda h: -h["score"]["verdict"])
+    # Same opening formula video after video is a template; nudge towards a different one.
+    rank = lambda h: h["score"]["verdict"] - (8 if h["score"]["formula"] in recent_formulas else 0)  # noqa: E731
+    hooks.sort(key=rank, reverse=True)
     log.info("hook: %s (%s, %s)", hooks[0]["english"], hooks[0]["score"]["verdict"], hooks[0]["score"]["formula"])
     return hooks
 
@@ -106,11 +154,15 @@ def _offline_scenes(n, language):
     return [{"narration": line, "visual_query": "city night", "image_prompt": "a city at night"} for _ in range(n)]
 
 
-def write_short(cat, language, topic, hook):
+def write_short(cat, language, topic, hook, structure, parent=None):
     words = 130
+    from_long = (f"This Short is cut from the channel's full video. Its script:\n{parent[:3500]}\n"
+                 "Pick ONE moment that works on its own (yt-shorts skill), retell it fresh, and end with a "
+                 "line that makes them want the full video ('full video on the channel').\n" if parent else "")
     prompt = (
         f"Write a YouTube SHORT (vertical, about {words} spoken words, 40-55 seconds).\n"
-        f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n"
+        f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n{from_long}"
+        f"Shape: {structure}\n"
         f"Start with exactly this hook: {hook['text']}\n"
         "6-9 scenes. The last line must loop back into the first line. No 'subscribe' talk.\n"
         f'JSON: {{"sections": [{{"heading": "Short", "scenes": [{SCENE_JSON}]}}]}}'
@@ -119,13 +171,15 @@ def write_short(cat, language, topic, hook):
                     offline=lambda: {"sections": [{"heading": "Short", "scenes": _offline_scenes(6, language)}]})
 
 
-def write_long(cat, language, topic, hook, minutes):
+def write_long(cat, language, topic, hook, minutes, structure):
     words = int(minutes * WPM)
     n_sections = max(3, min(10, round(minutes / 1.5)))
     outline = ask_json(
         f"Plan a {minutes}-minute YouTube video (~{words} spoken words) in {n_sections} sections.\n"
         f"Topic: {topic['topic']}\nAngle: {topic.get('angle', '')}{_facts_block(topic)}\n"
-        f"The hook is: {hook['text']}\n"
+        f"The hook is: {hook['text']}\nShape of the video: {structure}\n"
+        "Put an open question early that is only answered near the end, and a small re-hook every 2-3 "
+        "minutes so people stay (watch time is what grows the channel).\n"
         "Section 1 is the hook + the turn (say what the video will do, no channel intro). The last section "
         "is the payoff + ONE ask. Every section has one idea.\n"
         'JSON: {"sections": [{"heading": "3-5 word chapter title in the video language", '

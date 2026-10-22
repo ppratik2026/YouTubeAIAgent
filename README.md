@@ -116,7 +116,41 @@ har scene ki picture lagti hai, title/description banta hai, phir upload. File b
 - **Awaaz**: edge-tts free, ya aapki clone voice (aapke server par, free).
 - **Upload**: YouTube API free hai; bas roz ki limit.
 
-## 7. Server badalna
+## 7. Monetization ke liye smart features
+
+Koi tool monetization guarantee nahi kar sakta - YouTube har channel ko insaan se review karta hai, aur
+"inauthentic content" policy (mass-produced / template wali videos) ke under AI channels sabse zyada
+reject hote hain. Ye app wahi karta hai jo approval ke chances badhata hai:
+
+| Feature | Kya karta hai | Kahan |
+|---|---|---|
+| Channel identity | Har script ek hi host, ek niche, ek point of view se - "ek creator" lagta hai, farm nahi | `config/channel.json` - **pehle ye bharo** |
+| Har video alag | 7 video shapes (story, countdown, myth vs fact, case file...) rotate; pichhle hook formulas avoid | automatic |
+| Copy check | Nayi script pichhli 60 scripts se milti-julti ho (30%+) to upload nahi hoti | automatic |
+| Quality gate | Hook score + title score + kitne scenes mein asli picture + originality; kam ho to `./yt review` mein rukti hai | `quality_min` in channel.json |
+| Shorts -> long | Har long video se 2 Shorts, description mein "Full video" link. Watch hours long videos se hi aate hain | `shorts_per_long` |
+| Fixed time | Roz same prime-time slots par publish (default 6:30 PM, 8:30 PM IST) | `publish_times_ist` + `UPLOAD_PRIVACY=public` |
+| Apne channel se seekhna | Har 12 ghante views laata hai; jo topics/hooks/shapes chale wahi zyada, jo nahi chale wo kam | automatic |
+| Progress | Subscribers, 12 mahine ke watch hours (sirf long), 90 din ke Shorts views vs YPP | `./yt progress` |
+
+```sh
+./yt review            # rukhi hui videos + wajah
+./yt approve <id>      # upload karo
+./yt reject <id>
+./yt progress          # monetization kitna door
+```
+
+`./yt progress` ke liye YouTube Analytics permission chahiye: `scripts/get_refresh_token.py` ek baar
+dobara chalao aur naya `YT_REFRESH_TOKEN` daalo.
+
+**Sabse zyada farak in cheezon se padta hai** (code nahi kar sakta, aap kar sakte ho):
+- Ek niche par tike raho - har category mix karoge to na audience banegi na approval.
+- Long videos 8+ minute (mid-roll ads), Shorts sirf long videos tak laane ke liye.
+- Kuch videos apni awaaz / recording se (`--tts clone` ya `./yt record`) - asli insaan wala signal.
+- Comments ka jawab khud do (`/yt-comment` skill draft deta hai).
+- Health, finance, legal mein "expert advice" mat do.
+
+## 8. Server badalna
 
 ```sh
 # purane server se
@@ -126,6 +160,9 @@ sh install.sh
 ```
 
 ## Limits - pehle padh lo
+
+- **YPP (2026)**: 1,000 subscribers + (4,000 public watch hours in 12 months ya 10M Shorts views in
+  90 days). Kuch reports ke hisaab se Feb 2027 se ye badh sakta hai - YouTube help page check karo.
 
 - **YouTube quota**: default ~6 uploads/day per Google Cloud project. 100 videos bologe to banengi,
   upload roz ~6 karke hoga (`UPLOADS_PER_DAY`). Zyada chahiye to Google se quota increase maango
