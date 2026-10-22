@@ -37,11 +37,11 @@ def _new_work():
     return vid_id, work
 
 
-def _pictures(scenes, cat, portrait, work):
+def _pictures(scenes, cat, portrait, work, characters=None):
     used, seed = set(), visuals.new_seed()
     for n, sc in enumerate(scenes):
         sc["visual"], sc["kind"] = visuals.for_scene(sc, cat, portrait, used, work / f"img{n:03d}", n, seed,
-                                                     rewrite=writer.safe_image_prompt)
+                                                     rewrite=writer.safe_image_prompt, characters=characters)
 
 
 def _script_text(script):
@@ -157,7 +157,10 @@ def make_video(job):
     scenes = [sc for sec in script["sections"] for sc in sec["scenes"]]
     for n, sc in enumerate(scenes):
         sc["audio"] = tts.speak(sc["narration"], work / f"s{n:03d}", lang, gender, cat["mood"], engine)
-    _pictures(scenes, cat, portrait, work)
+    if script.get("characters"):
+        log.info("cast: %s", ", ".join(c.get("name", "?") for c in script["characters"]))
+        meta["characters"] = script["characters"]
+    _pictures(scenes, cat, portrait, work, script.get("characters"))
     entry = _finish(job, cat, vid_id, work, script, meta, topic, render.GAP, hook, extra={
         "formula": hook["score"]["formula"], "structure": structure, "parent": job.get("from_video"),
         "event": job.get("event")})

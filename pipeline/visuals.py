@@ -140,12 +140,21 @@ def test_pattern(dest, portrait, n):
     return out, "image"
 
 
-def for_scene(scene, cat, portrait, used, dest, n, seed, rewrite=None):
+def with_cast(prompt, scene, characters):
+    """The same written look for a character in every picture they are in."""
+    looks = {c.get("name", "").lower(): c.get("look", "") for c in characters or []}
+    cast = [looks[n.lower()] and f"{n}: {looks[n.lower()]}" for n in scene.get("cast") or [] if n.lower() in looks]
+    return f"{prompt}. Characters in the shot - {'; '.join(cast)}" if cast else prompt
+
+
+def for_scene(scene, cat, portrait, used, dest, n, seed, rewrite=None, characters=None):
     if settings.VISUALS_OFFLINE:
         return test_pattern(dest, portrait, n)
     query = scene.get("visual_query") or "abstract background"
-    prompt = scene.get("image_prompt") or query
+    prompt = with_cast(scene.get("image_prompt") or query, scene, characters)
     style = style_text(cat.get("style"))
+    if characters:
+        n = 0  # one seed for the whole video: same rendering of the same faces and style
     if cat.get("visuals") == "ai":
         order = [lambda: ai_image(prompt, style, portrait, seed + n, dest, rewrite),
                  lambda: pexels_photo(query, portrait, used, dest)]

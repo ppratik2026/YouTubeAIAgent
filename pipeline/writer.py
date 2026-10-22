@@ -149,6 +149,17 @@ SCENE_JSON = ('{"narration": "1-2 spoken sentences", "emphasis": ["1-2 key words
               'stock footage", "image_prompt": "one detailed English sentence describing the picture"}')
 
 
+CHARACTERS_JSON = ('"characters": [{"name": "short name used in scenes", "look": "fixed appearance in English: '
+                   'age, gender, face, hair, skin tone, body, exact clothes and colours, one signature detail"}]')
+CAST_RULE = ("This video uses AI pictures, so the same people must look the same in every picture: define each "
+             "recurring character ONCE in \"characters\", and in every scene list who is in the shot in "
+             "\"cast\" (names only). Image prompts describe action, place and emotion - not the looks.\n")
+
+
+def _cast(cat):
+    return cat.get("visuals") == "ai"
+
+
 def _offline_scenes(n, language):
     line = ("यह एक टेस्ट वाक्य है जो वीडियो की आवाज़ और सबटाइटल जाँचने के लिए है।" if language == "hi"
             else "This is a test sentence to check the voice and the subtitles of the video.")
@@ -156,6 +167,9 @@ def _offline_scenes(n, language):
 
 
 def write_short(cat, language, topic, hook, structure, parent=None, lessons=""):
+    scene_json = SCENE_JSON[:-1] + ', "cast": ["names"]}' if _cast(cat) else SCENE_JSON
+    cast = CAST_RULE if _cast(cat) else ""
+    top = f"{CHARACTERS_JSON}, " if _cast(cat) else ""
     words = 130
     from_long = (f"This Short is cut from the channel's full video. Its script:\n{parent[:3500]}\n"
                  "Pick ONE moment that works on its own (yt-shorts skill), retell it fresh, and end with a "
@@ -166,7 +180,8 @@ def write_short(cat, language, topic, hook, structure, parent=None, lessons=""):
         f"Shape: {structure}\n{lessons}"
         f"Start with exactly this hook: {hook['text']}\n"
         "6-9 scenes. The last line must loop back into the first line. No 'subscribe' talk.\n"
-        f'JSON: {{"sections": [{{"heading": "Short", "scenes": [{SCENE_JSON}]}}]}}'
+        f"{cast}"
+        f'JSON: {{{top}"sections": [{{"heading": "Short", "scenes": [{scene_json}]}}]}}'
     )
     return ask_json(prompt, _system(cat, language),
                     offline=lambda: {"sections": [{"heading": "Short", "scenes": _offline_scenes(6, language)}]})
@@ -174,6 +189,9 @@ def write_short(cat, language, topic, hook, structure, parent=None, lessons=""):
 
 def write_long(cat, language, topic, hook, minutes, structure, lessons=""):
     words = int(minutes * WPM)
+    scene_json = SCENE_JSON[:-1] + ', "cast": ["names"]}' if _cast(cat) else SCENE_JSON
+    cast = CAST_RULE if _cast(cat) else ""
+    top = f"{CHARACTERS_JSON}, " if _cast(cat) else ""
     n_sections = max(3, min(10, round(minutes / 1.5)))
     outline = ask_json(
         f"Plan a {minutes}-minute YouTube video (~{words} spoken words) in {n_sections} sections.\n"
@@ -183,12 +201,16 @@ def write_long(cat, language, topic, hook, minutes, structure, lessons=""):
         "minutes so people stay (watch time is what grows the channel).\n"
         "Section 1 is the hook + the turn (say what the video will do, no channel intro). The last section "
         "is the payoff + ONE ask. Every section has one idea.\n"
-        'JSON: {"sections": [{"heading": "3-5 word chapter title in the video language", '
+        f"{cast}"
+        f'JSON: {{{top}"sections": [{{"heading": "3-5 word chapter title in the video language", '
         '"beats": "what happens in this section, 2-3 lines, English", "words": 0}]}',
         _system(cat, language),
         offline=lambda: {"sections": [{"heading": f"भाग {i + 1}" if language == "hi" else f"Part {i + 1}",
                                        "beats": "test", "words": words // n_sections} for i in range(n_sections)]},
         temperature=0.7)
+    characters = outline.get("characters") or []
+    who = ("Characters (use these names in \"cast\"): " + ", ".join(c["name"] for c in characters) + "\n"
+           if characters else "")
     sections, story_so_far = [], []
     for i, sec in enumerate(outline["sections"]):
         target = int(sec.get("words") or words // len(outline["sections"]))
@@ -199,15 +221,15 @@ def write_long(cat, language, topic, hook, minutes, structure, lessons=""):
             f"Whole plan: {[s['heading'] for s in outline['sections']]}\n"
             f"This section: {sec['heading']} - {sec['beats']}\n"
             f"Already said (do not repeat): {' '.join(story_so_far)[-1500:]}\n{first}"
-            f"About {target} spoken words, split into scenes of 1-2 sentences.\n{lessons}"
-            f'JSON: {{"scenes": [{SCENE_JSON}]}}',
+            f"About {target} spoken words, split into scenes of 1-2 sentences.\n{lessons}{who}"
+            f'JSON: {{"scenes": [{scene_json}]}}',
             _system(cat, language),
             offline=lambda: {"scenes": _offline_scenes(4, language)},
             temperature=0.8)
         scenes = [s for s in out.get("scenes", []) if s.get("narration", "").strip()]
         sections.append({"heading": sec["heading"], "scenes": scenes})
         story_so_far += [s["narration"] for s in scenes]
-    return {"sections": sections}
+    return {"sections": sections, "characters": characters}
 
 
 # ---------- 4. packaging ----------
