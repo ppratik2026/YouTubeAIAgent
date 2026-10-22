@@ -13,6 +13,8 @@
   review                    videos held back by the quality gate, and why
   approve <video_id> | reject <video_id>
   progress                  subscribers / watch hours / Shorts views vs monetization
+  comments [--fetch]        drafted replies waiting for you
+  reply <comment_id> [--text "..."] | reply-skip <comment_id>
   worker                    run forever: make queued videos, upload, sleep (all channels, in turn)
   channels                  list channels;   channel-add NAME   make a new one
   categories | styles | edits | voices
@@ -33,7 +35,7 @@ if "--channel" in sys.argv[1:-1]:
     os.environ["CHANNEL"] = sys.argv[_i + 1]
     del sys.argv[_i:_i + 2]
 
-from . import insights, llm, maker, settings, state, tts  # noqa: E402
+from . import comments, insights, llm, maker, settings, state, tts  # noqa: E402
 from .util import log, setup_logging  # noqa: E402
 
 IDLE, DAILY_LIMIT = 3, 4  # tick exit codes
@@ -129,6 +131,20 @@ def cmd_review(_):
     print(f"\n{len(held)} waiting. ./yt approve <id> uploads it, ./yt reject <id> drops it.")
 
 
+def cmd_comments(a):
+    if a.fetch:
+        print("new comments:", comments.fetch_and_draft(force=True))
+    for c in comments.pending():
+        print(f"{c['id']}  [{c['pile']}] {c['author']} on '{c['video_title'][:40]}':\n    {c['text'][:200]}\n"
+              f"  -> {c['reply']}{'   (pin this)' if c.get('pin') else ''}\n")
+    print("./yt reply <id> posts the draft (or --text to change it), ./yt reply-skip <id> drops it")
+
+
+def cmd_reply(a):
+    print("approved" if comments.approve(a.comment_id, a.text) else "not found")
+    print("posted", comments.post_approved())
+
+
 def cmd_set_status(status):
     def go(a):
         state.update_history(a.video_id, status=status)
@@ -143,6 +159,8 @@ def tick(max_uploads=None):
         maker.cleanup()
         insights.refresh_stats()
         insights.refresh_retention()
+        comments.fetch_and_draft()
+        comments.post_approved()
     except Exception:  # noqa: BLE001
         log.error("upload/stats error:\n%s", traceback.format_exc())
     job = state.next_job()
@@ -259,6 +277,16 @@ def main(argv=None):
         p.add_argument("video_id")
         p.set_defaults(fn=cmd_set_status(status))
     sub.add_parser("progress").set_defaults(fn=lambda a: print(insights.progress()))
+    p = sub.add_parser("comments")
+    p.add_argument("--fetch", action="store_true")
+    p.set_defaults(fn=cmd_comments)
+    p = sub.add_parser("reply")
+    p.add_argument("comment_id")
+    p.add_argument("--text")
+    p.set_defaults(fn=cmd_reply)
+    p = sub.add_parser("reply-skip")
+    p.add_argument("comment_id")
+    p.set_defaults(fn=lambda a: comments.skip(a.comment_id))
     sub.add_parser("voices").set_defaults(fn=cmd_voices)
     sub.add_parser("categories").set_defaults(fn=lambda a: _print_json_keys(settings.ROOT / "config/categories.json"))
     sub.add_parser("styles").set_defaults(fn=lambda a: _print_json_keys(settings.ROOT / "config/styles.json"))
